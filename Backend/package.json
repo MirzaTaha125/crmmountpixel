@@ -1,0 +1,37 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "seed:permissions": "node src/scripts/seedPermissions.js"
+  },
+  "type": "module",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "axios": "^1.10.0",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "crypto-js": "^4.2.0",
+    "dotenv": "^17.2.0",
+    "express": "^4.18.2",
+    "express-rate-limit": "^8.2.1",
+    "fs-extra": "^11.3.2",
+    "helmet": "^8.1.0",
+    "imap": "^0.8.19",
+    "jsonwebtoken": "^9.0.2",
+    "mailparser": "^3.7.4",
+    "mongoose": "^7.0.3",
+    "multer": "^2.0.2",
+    "nodemailer": "^7.0.6",
+    "nodemon": "^3.1.10",
+    "path": "^0.12.7",
+    "pdfkit": "^0.17.2",
+    "qrcode": "^1.5.4",
+    "socket.io": "^4.8.1",
+    "speakeasy": "^2.0.0"
+  }
+}
