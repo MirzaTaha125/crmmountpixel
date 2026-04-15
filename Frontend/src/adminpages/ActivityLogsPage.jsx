@@ -302,7 +302,6 @@ function ActivityLogsPage({ colors: colorsProp }) {
           border: `1px solid ${colors.borderLight}`,
           boxShadow: theme.shadows.sm
         }}>
-        }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: theme.spacing.md }} className="audit-filters-grid">
             <div>
               <label style={{ display: 'block', fontSize: '9px', fontWeight: 'bold', color: colors.textSecondary, marginBottom: '4px', textTransform: 'uppercase' }}>Search Description</label>
@@ -425,7 +424,7 @@ function ActivityLogsPage({ colors: colorsProp }) {
                 <tr><td colSpan={5} style={{ padding: theme.spacing['2xl'], textAlign: 'center', color: colors.textTertiary, fontSize: theme.typography.fontSizes.xs }}>Streaming server logs...</td></tr>
               ) : logs.length === 0 ? (
                 <tr><td colSpan={5} style={{ padding: theme.spacing['2xl'], textAlign: 'center', color: colors.textTertiary, fontSize: theme.typography.fontSizes.xs }}>No activity recorded in index.</td></tr>
-              ) : logs.map((log, idx) => (
+              ) : logs.map((log) => (
                 <tr key={log._id} style={{ 
                   borderBottom: `1px solid ${colors.borderLight}`,
                   background: colors.white, // Uniform white background
