@@ -9,8 +9,9 @@ let io;
 export const initSocket = (server) => {
     io = new Server(server, {
         cors: {
-            origin: "*", // Allow all origins for now, or specify frontend URL
-            methods: ["GET", "POST"]
+            origin: ["https://minutesheet.com", "https://www.minutesheet.com", "http://localhost:5173", "http://localhost:3000"],
+            methods: ["GET", "POST"],
+            credentials: true
         }
     });
 
