@@ -510,7 +510,7 @@ export default function PaymentGeneratorPage({ colors: colorsProp }) {
                 <tr><td colSpan={8} style={{ padding: theme.spacing['2xl'], textAlign: 'center', color: colors.textTertiary, fontSize: theme.typography.fontSizes.xs }}>Fetching records...</td></tr>
               ) : invoices.length === 0 ? (
                 <tr><td colSpan={8} style={{ padding: theme.spacing['2xl'], textAlign: 'center', color: colors.textTertiary, fontSize: theme.typography.fontSizes.xs }}>No invoice data found for the selected period.</td></tr>
-              ) : invoices.map((inv, idx) => (
+              ) : invoices.map((inv) => (
                 <tr key={inv._id} style={{ 
                   borderBottom: `1px solid ${colors.borderLight}`,
                   background: colors.white,

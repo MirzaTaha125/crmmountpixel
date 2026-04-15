@@ -243,7 +243,7 @@ function ClientDetailsModal({ client, open, onClose, colors, userRole }) {
         amount: editProject.amount ? parseFloat(editProject.amount) : null,
         clientId: client._id,
       };
-      const res = await axios.put(`${API_URL}/api/project-details/${id}`, updateData, { headers });
+      await axios.put(`${API_URL}/api/project-details/${id}`, updateData, { headers });
       setEditProjectId(null);
       setEditProject(null);
       setError('');
