@@ -7,12 +7,21 @@ import Register from './Register';
 import ClientPaymentLink from './ClientPaymentLink';
 import { useSession } from './session';
 
+function HomeRedirect() {
+  const { user } = useSession();
+  if (!user) return <Navigate to="/signin" />;
+  if (user.Role === 'Admin') return <Navigate to="/admin" />;
+  if (user.type === 'Client') return <Navigate to="/client" />;
+  return <Navigate to="/user" />;
+}
+
 function App() {
   const { user } = useSession();
 
   return (
     <Router>
       <Routes>
+        <Route path="/" element={<HomeRedirect />} />
         <Route path="/signin" element={<SignIn />} />
         <Route path="/admin" element={user?.Role === 'Admin' ? <AdminPanel /> : <Navigate to="/signin" />} />
         <Route path="/user" element={user && user.Role !== 'Admin' ? <UserPanel /> : <Navigate to="/signin" />} />

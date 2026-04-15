@@ -53,7 +53,7 @@ const expenseSchema = new mongoose.Schema({
   brand: {
     type: String,
     trim: true,
-    enum: ['Webdevelopers Inc', 'American Design Eagle', 'Mount Pixels'],
+    enum: ['Webdevelopers Inc', 'American Design Eagle', 'Mount Pixels', ''],
     default: ''
   },
   paymentMethod: {

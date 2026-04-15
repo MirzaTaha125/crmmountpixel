@@ -4,11 +4,11 @@ import getApiBaseUrl from '../apiBase';
 import { theme, getColors } from '../theme';
 import { FaUsers, FaUserTie, FaUser, FaBoxOpen, FaEnvelope, FaCreditCard, FaDollarSign, FaChartLine, FaTachometerAlt, FaUserCog, FaMoneyCheckAlt, FaCalendarAlt, FaShieldAlt, FaArrowUp, FaArrowDown, FaCheckCircle, FaClock, FaTimesCircle, FaFileInvoice, FaUserCheck, FaUserTimes, FaBell } from 'react-icons/fa';
 
-function UserDashboardPage({ clients, users, employees, salaries, colors: colorsProp, user, setActiveTab, canView }) {
+function UserDashboardPage({ clients, users, employees, colors: colorsProp, user, setActiveTab, canView }) {
   const colors = colorsProp || getColors();
-  const [mostPopularPackage, setMostPopularPackage] = useState('');
-  const [recentInquiries, setRecentInquiries] = useState([]);
-  const [recentPaymentLinks, setRecentPaymentLinks] = useState([]);
+  const [_mostPopularPackage, setMostPopularPackage] = useState('');
+  const [_recentInquiries, setRecentInquiries] = useState([]);
+  const [_recentPaymentLinks, setRecentPaymentLinks] = useState([]);
   const [allCustomPackages, setAllCustomPackages] = useState([]);
   const [allPaymentLinks, setAllPaymentLinks] = useState([]);
   const [allPaymentHistory, setAllPaymentHistory] = useState([]);
@@ -240,12 +240,12 @@ function UserDashboardPage({ clients, users, employees, salaries, colors: colors
   // Get recent items
   const filteredRecentClients = [...filteredClients].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)).slice(0, 5);
   const filteredInquiries = [...filteredInquiriesData].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)).slice(0, 5);
-  const filteredPaymentLinks = [...filteredPaymentLinksData].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)).slice(0, 5);
+  const _filteredPaymentLinks = [...filteredPaymentLinksData].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)).slice(0, 5);
 
   // Calculate statistics
   const totalClients = filteredClients.length;
   const totalEmployees = filteredEmployees.length;
-  const totalUsers = filteredUsers.length;
+  const _totalUsers = filteredUsers.length;
   const customPackagesCount = filteredCustomPackages.length;
   const inquiriesCount = filteredInquiriesData.length;
   
@@ -262,7 +262,7 @@ function UserDashboardPage({ clients, users, employees, salaries, colors: colors
     const clientId = c._id?.toString() || c._id?.toString() || String(c._id);
     return assignedClientIds.has(clientId);
   }).length;
-  const unassignedClients = totalClients - assignedClients;
+  const _unassignedClients = totalClients - assignedClients;
   
   // Payment Analytics
   // Revenue is calculated from PaymentHistory (actual money received with status "Completed")
@@ -324,7 +324,7 @@ function UserDashboardPage({ clients, users, employees, salaries, colors: colors
     const date = new Date(c.createdAt || 0);
     return date >= lastMonthStart && date <= lastMonthEnd;
   }).length;
-  const clientGrowth = previousClients > 0 ? (((recentClients - previousClients) / previousClients) * 100).toFixed(1) : recentClients > 0 ? 100 : 0;
+  const _clientGrowth = previousClients > 0 ? (((recentClients - previousClients) / previousClients) * 100).toFixed(1) : recentClients > 0 ? 100 : 0;
 
   // Calculate revenue growth: current month vs last month
   const currentMonthRevenue = (allCompletedPayments || []).filter(p => {
@@ -356,7 +356,7 @@ function UserDashboardPage({ clients, users, employees, salaries, colors: colors
   };
   
   // Map tabId to permission module
-  const getPermissionForTab = (tabId) => {
+  const _getPermissionForTab = (tabId) => {
     const tabPermissionMap = {
       'clients': 'clients',
       'payment-generator': 'payments',

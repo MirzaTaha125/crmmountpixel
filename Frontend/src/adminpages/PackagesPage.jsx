@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import getApiBaseUrl from '../apiBase';
-import { FaEdit, FaTrash, FaTimes, FaTag, FaDollarSign, FaListAlt, FaAlignLeft } from 'react-icons/fa';
+import { theme } from '../theme';
+import { FaEdit, FaTrash, FaTimes, FaTag, FaDollarSign, FaListAlt, FaAlignLeft, FaPlus } from 'react-icons/fa';
 
 function PackagesPage({ colors }) {
   const [packages, setPackages] = useState([]);
@@ -39,7 +40,7 @@ function PackagesPage({ colors }) {
       if (filterCategory) url += `category=${encodeURIComponent(filterCategory)}&`;
       const res = await axios.get(url);
       setPackages(res.data);
-    } catch (err) {
+    } catch {
       setPackageError('Failed to fetch packages');
     }
   };
@@ -102,7 +103,7 @@ function PackagesPage({ colors }) {
     try {
       await axios.delete(`${API_URL}/api/packages/${pkg._id}`);
       fetchPackages();
-    } catch (err) {
+    } catch {
       setPackageError('Error deleting package');
     } finally {
       setLoading(false);
@@ -160,25 +161,91 @@ function PackagesPage({ colors }) {
   };
 
   return (
-    <div className="main-container" style={{ border: `1px solid ${colors.border}`, borderRadius: 18, background: colors.cardBg, boxShadow: colors.cardShadow, padding: 36, width: '95%', height: '100%', maxWidth: 'none', margin: 0, minHeight: 'calc(100vh - 100px)' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
-        <h2 style={{ fontSize: 32, fontWeight: 900, color: colors.text, letterSpacing: 1 }}>Packages</h2>
-        <div style={{ display: 'flex', gap: 16 }}>
-          <button onClick={openPackageAddModal} style={{ padding: '12px 28px', background: colors.accent, color: '#fff', border: 'none', borderRadius: 10, fontWeight: 800, fontSize: 18, boxShadow: colors.cardShadow, cursor: 'pointer', transition: 'background 0.2s' }}>+ Add Package</button>
+    <div style={{ width: '100%', fontFamily: 'inherit' }}>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: theme.spacing.lg,
+        background: colors.white,
+        padding: theme.spacing.md,
+        borderRadius: theme.radius.lg,
+        border: `1px solid ${colors.borderLight}`,
+        boxShadow: theme.shadows.sm,
+      }}>
+        <div>
+          <h2 style={{
+            fontSize: theme.typography.fontSizes.xl,
+            fontWeight: theme.typography.fontWeights.bold,
+            color: colors.textPrimary,
+            margin: 0,
+            textTransform: 'uppercase',
+            letterSpacing: '1px'
+          }}>
+            Package Catalog
+          </h2>
+          <p style={{
+            fontSize: theme.typography.fontSizes.xs,
+            color: colors.textSecondary,
+            margin: 0,
+          }}>
+            {packages.length} service offer definitions
+          </p>
         </div>
+        <button
+          onClick={openPackageAddModal}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: theme.spacing.sm,
+            padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
+            background: colors.primary,
+            color: colors.white,
+            border: 'none',
+            borderRadius: theme.radius.md,
+            fontWeight: theme.typography.fontWeights.bold,
+            fontSize: theme.typography.fontSizes.xs,
+            textTransform: 'uppercase',
+            cursor: 'pointer',
+            transition: `all ${theme.transitions.fast}`,
+            boxShadow: theme.shadows.sm,
+          }}
+        >
+          <FaPlus />
+          Add New Package
+        </button>
       </div>
-      <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
+      <div style={{ display: 'flex', gap: theme.spacing.md, marginBottom: theme.spacing.xl }}>
         <input
           type="text"
           placeholder="Search by name..."
           value={filterName}
           onChange={e => setFilterName(e.target.value)}
-          style={{ padding: 10, borderRadius: 7, border: `1px solid ${colors.border}`, fontSize: 16, background: colors.accentLight, minWidth: 180 }}
+          style={{
+            padding: theme.spacing.sm,
+            borderRadius: theme.radius.md,
+            border: `1px solid ${colors.border}`,
+            fontSize: theme.typography.fontSizes.xs,
+            background: colors.white,
+            color: colors.textPrimary,
+            minWidth: 200,
+            outline: 'none'
+          }}
         />
         <select
           value={filterCategory}
           onChange={e => setFilterCategory(e.target.value)}
-          style={{ padding: 10, borderRadius: 7, border: `1px solid ${colors.border}`, fontSize: 16, background: colors.accentLight, minWidth: 180 }}
+          style={{
+            padding: theme.spacing.sm,
+            borderRadius: theme.radius.md,
+            border: `1px solid ${colors.border}`,
+            fontSize: theme.typography.fontSizes.xs,
+            background: colors.white,
+            color: colors.textPrimary,
+            minWidth: 200,
+            outline: 'none',
+            cursor: 'pointer'
+          }}
         >
           <option value="">All Categories</option>
           {CATEGORY_OPTIONS.map(opt => (
@@ -186,31 +253,49 @@ function PackagesPage({ colors }) {
           ))}
         </select>
       </div>
-      <div className="responsive-table" style={{ borderRadius: 12, background: colors.accentLight, boxShadow: colors.cardShadow }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', background: colors.cardBg }}>
-          <thead style={{ background: colors.accentLight }}>
+      <div style={{
+        background: colors.white,
+        borderRadius: theme.radius.lg,
+        border: `1px solid ${colors.borderLight}`,
+        overflow: 'hidden',
+        boxShadow: theme.shadows.md,
+      }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead style={{ background: colors.tableHeaderBg }}>
             <tr>
-              <th style={{ padding: 16, color: colors.text, fontWeight: 800, fontSize: 17 }}>Name</th>
-              <th style={{ padding: 16, color: colors.text, fontWeight: 800, fontSize: 17 }}>Price</th>
-              <th style={{ padding: 16, color: colors.text, fontWeight: 800, fontSize: 17 }}>Description</th>
-              <th style={{ padding: 16, color: colors.text, fontWeight: 800, fontSize: 17 }}>Category</th>
-              <th style={{ padding: 16, color: colors.text, fontWeight: 800, fontSize: 17 }}>Actions</th>
+              <th style={{ padding: `${theme.spacing.sm} ${theme.spacing.lg}`, textAlign: 'left', color: colors.textPrimary, fontWeight: 'bold', fontSize: '9px', textTransform: 'uppercase', letterSpacing: '1px', borderBottom: `2px solid ${colors.border}`, borderRight: `1px solid ${colors.border}` }}>Name</th>
+              <th style={{ padding: `${theme.spacing.sm} ${theme.spacing.lg}`, textAlign: 'left', color: colors.textPrimary, fontWeight: 'bold', fontSize: '9px', textTransform: 'uppercase', letterSpacing: '1px', borderBottom: `2px solid ${colors.border}`, borderRight: `1px solid ${colors.border}` }}>Price</th>
+              <th style={{ padding: `${theme.spacing.sm} ${theme.spacing.lg}`, textAlign: 'left', color: colors.textPrimary, fontWeight: 'bold', fontSize: '9px', textTransform: 'uppercase', letterSpacing: '1px', borderBottom: `2px solid ${colors.border}`, borderRight: `1px solid ${colors.border}` }}>Description</th>
+              <th style={{ padding: `${theme.spacing.sm} ${theme.spacing.lg}`, textAlign: 'left', color: colors.textPrimary, fontWeight: 'bold', fontSize: '9px', textTransform: 'uppercase', letterSpacing: '1px', borderBottom: `2px solid ${colors.border}`, borderRight: `1px solid ${colors.border}` }}>Category</th>
+              <th style={{ padding: `${theme.spacing.sm} ${theme.spacing.lg}`, textAlign: 'left', color: colors.textPrimary, fontWeight: 'bold', fontSize: '9px', textTransform: 'uppercase', letterSpacing: '1px', borderBottom: `2px solid ${colors.border}` }}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {[...packages].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).map(pkg => (
-              <tr key={pkg._id} style={{ borderBottom: `1px solid ${colors.border}` }}>
-                <td style={{ padding: 16 }}>{pkg.name}</td>
-                <td style={{ padding: 16 }}>${pkg.price}</td>
-                <td style={{ padding: 16, maxWidth: 300, wordBreak: 'break-word' }}>{renderDescription(pkg)}</td>
-                <td style={{ padding: 16 }}>{pkg.category}</td>
-                <td style={{ padding: 16 }}>
-                  <span onClick={() => openPackageEditModal(pkg)} style={{ cursor: 'pointer', background: 'none', fontSize: 18, borderRadius: 6, marginRight: 10, color: colors.accent, verticalAlign: 'middle', display: 'inline-flex', alignItems: 'center' }} role="button" aria-label="Edit" title="Edit">
-                    <FaEdit />
-                  </span>
-                  <span onClick={() => handlePackageDelete(pkg)} style={{ cursor: 'pointer', background: 'none', fontSize: 18, borderRadius: 6, color: colors.dangerDark, verticalAlign: 'middle', display: 'inline-flex', alignItems: 'center' }} role="button" aria-label="Delete" title="Delete">
-                    <FaTrash />
-                  </span>
+              <tr key={pkg._id} style={{ borderBottom: `1px solid ${colors.borderLight}` }}>
+                <td style={{ padding: theme.spacing.md, fontSize: theme.typography.fontSizes.sm, fontWeight: 'bold', color: colors.textPrimary }}>{pkg.name}</td>
+                <td style={{ padding: theme.spacing.md, fontSize: theme.typography.fontSizes.sm, color: colors.success, fontWeight: 'bold' }}>${pkg.price}</td>
+                <td style={{ padding: theme.spacing.md, fontSize: theme.typography.fontSizes.xs, color: colors.textSecondary, maxWidth: 400 }}>{renderDescription(pkg)}</td>
+                <td style={{ padding: theme.spacing.md }}>
+                  <span style={{
+                    padding: '2px 8px',
+                    background: colors.primaryBg,
+                    color: colors.primary,
+                    borderRadius: theme.radius.full,
+                    fontSize: theme.typography.fontSizes['2xs'],
+                    fontWeight: 'bold',
+                    textTransform: 'uppercase'
+                  }}>{pkg.category}</span>
+                </td>
+                <td style={{ padding: theme.spacing.md }}>
+                  <div style={{ display: 'flex', gap: theme.spacing.sm }}>
+                    <span onClick={() => openPackageEditModal(pkg)} style={{ cursor: 'pointer', fontSize: '16px', color: colors.primary }} role="button" aria-label="Edit" title="Edit">
+                      <FaEdit />
+                    </span>
+                    <span onClick={() => handlePackageDelete(pkg)} style={{ cursor: 'pointer', fontSize: '16px', color: colors.error }} role="button" aria-label="Delete" title="Delete">
+                      <FaTrash />
+                    </span>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -238,66 +323,53 @@ function PackagesPage({ colors }) {
             if (e.target === e.currentTarget) closePackageModal();
           }}
         >
-          <div 
-            style={{ 
-              background: colors.cardBg, 
-              borderRadius: 20, 
+          <div
+            style={{
+              background: colors.white,
+              borderRadius: theme.radius.xl,
               padding: 0,
               width: '100%',
-              maxWidth: '550px',
-              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+              maxWidth: '600px',
+              boxShadow: theme.shadows.xl,
               overflow: 'hidden',
               maxHeight: '90vh',
               display: 'flex',
-              flexDirection: 'column'
+              flexDirection: 'column',
+              border: `1px solid ${colors.border}`
             }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
             <div style={{
-              background: `linear-gradient(135deg, ${colors.accent} 0%, ${colors.accent}dd 100%)`,
-              padding: '24px 32px',
+              background: colors.tableHeaderBg,
+              padding: `15px 20px`,
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
               borderBottom: `2px solid ${colors.border}`
             }}>
-              <h2 style={{ 
-                margin: 0, 
-                fontWeight: 800, 
-                fontSize: 24,
-                color: '#fff',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12
+              <h2 style={{
+                margin: 0,
+                fontWeight: 'bold',
+                fontSize: '11px',
+                color: colors.textPrimary,
+                textTransform: 'uppercase',
+                letterSpacing: '1px'
               }}>
-                <FaTag style={{ fontSize: 20 }} />
-                {selectedPackage ? 'Edit Package' : 'Create New Package'}
+                {selectedPackage ? 'Service Catalog: Update Definition' : 'Service Catalog: Create New Entry'}
               </h2>
               <button
                 onClick={closePackageModal}
                 style={{
-                  background: 'rgba(255, 255, 255, 0.2)',
+                  background: 'transparent',
                   border: 'none',
-                  borderRadius: '50%',
-                  width: 36,
-                  height: 36,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   cursor: 'pointer',
-                  color: '#fff',
+                  color: colors.textTertiary,
                   fontSize: 18,
-                  transition: 'all 0.2s',
                   padding: 0
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.background = 'rgba(255, 255, 255, 0.3)';
-                  e.target.style.transform = 'rotate(90deg)';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.background = 'rgba(255, 255, 255, 0.2)';
-                  e.target.style.transform = 'rotate(0deg)';
                 }}
               >
                 <FaTimes />
@@ -305,287 +377,196 @@ function PackagesPage({ colors }) {
             </div>
 
             {/* Modal Body */}
-            <div style={{ padding: '32px', overflowY: 'auto', flex: 1 }}>
+            <div style={{ padding: theme.spacing.xl, overflowY: 'auto', flex: 1 }}>
             <form onSubmit={handlePackageSave}>
                 {/* Name Field */}
                 <div style={{ marginBottom: 24 }}>
-                  <label style={{ 
-                    display: 'flex', 
-                    alignItems: 'center',
-                    gap: 8,
-                    fontWeight: 700, 
-                    marginBottom: 10, 
-                    color: colors.text,
-                    fontSize: 14,
+                  <label style={{
+                    display: 'block',
+                    fontWeight: 'bold',
+                    marginBottom: theme.spacing.xs,
+                    color: colors.textSecondary,
+                    fontSize: theme.typography.fontSizes['2xs'],
                     textTransform: 'uppercase',
-                    letterSpacing: 0.5
+                    letterSpacing: '0.5px'
                   }}>
-                    <FaTag style={{ fontSize: 14, color: colors.accent }} />
                     Package Name
                   </label>
-                  <input 
-                    name="name" 
-                    value={packageForm.name} 
-                    onChange={handlePackageFormChange} 
+                  <input
+                    name="name"
+                    value={packageForm.name}
+                    onChange={handlePackageFormChange}
                     placeholder="Enter package name..."
-                    style={{ 
-                      width: '100%', 
-                      padding: '14px 16px', 
-                      borderRadius: 12, 
-                      border: `2px solid ${colors.border}`, 
-                      fontSize: 16, 
-                      background: colors.accentLight,
-                      transition: 'all 0.2s',
+                    style={{
+                      width: '100%',
+                      padding: theme.spacing.sm,
+                      borderRadius: theme.radius.md,
+                      border: `1px solid ${colors.border}`,
+                      fontSize: theme.typography.fontSizes.xs,
+                      background: colors.white,
                       outline: 'none',
-                      fontFamily: 'inherit'
                     }}
-                    onFocus={(e) => {
-                      e.target.style.borderColor = colors.accent;
-                      e.target.style.boxShadow = `0 0 0 3px ${colors.accent}22`;
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = colors.border;
-                      e.target.style.boxShadow = 'none';
-                    }}
-                    required 
+                    required
                   />
               </div>
 
                 {/* Price and Category Row */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 24 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: theme.spacing.md, marginBottom: theme.spacing.lg }}>
                   {/* Price Field */}
                   <div>
-                    <label style={{ 
-                      display: 'flex', 
-                      alignItems: 'center',
-                      gap: 8,
-                      fontWeight: 700, 
-                      marginBottom: 10, 
-                      color: colors.text,
-                      fontSize: 14,
+                    <label style={{
+                      display: 'block',
+                      fontWeight: 'bold',
+                      marginBottom: theme.spacing.xs,
+                      color: colors.textSecondary,
+                      fontSize: theme.typography.fontSizes['2xs'],
                       textTransform: 'uppercase',
-                      letterSpacing: 0.5
+                      letterSpacing: '0.5px'
                     }}>
-                      <FaDollarSign style={{ fontSize: 14, color: colors.accent }} />
-                      Price
+                      Price ($)
                     </label>
-                    <input 
-                      name="price" 
-                      type="number" 
-                      value={packageForm.price} 
-                      onChange={handlePackageFormChange} 
+                    <input
+                      name="price"
+                      type="number"
+                      value={packageForm.price}
+                      onChange={handlePackageFormChange}
                       placeholder="0.00"
                       min="0"
                       step="0.01"
-                      style={{ 
-                        width: '100%', 
-                        padding: '14px 16px', 
-                        borderRadius: 12, 
-                        border: `2px solid ${colors.border}`, 
-                        fontSize: 16, 
-                        background: colors.accentLight,
-                        transition: 'all 0.2s',
+                      style={{
+                        width: '100%',
+                        padding: theme.spacing.sm,
+                        borderRadius: 0,
+                        border: `1px solid ${colors.border}`,
+                        fontSize: theme.typography.fontSizes.xs,
+                        background: colors.white,
                         outline: 'none',
-                        fontFamily: 'inherit'
                       }}
-                      onFocus={(e) => {
-                        e.target.style.borderColor = colors.accent;
-                        e.target.style.boxShadow = `0 0 0 3px ${colors.accent}22`;
-                      }}
-                      onBlur={(e) => {
-                        e.target.style.borderColor = colors.border;
-                        e.target.style.boxShadow = 'none';
-                      }}
-                      required 
+                      required
                     />
-              </div>
+                  </div>
 
                   {/* Category Field */}
                   <div>
-                    <label style={{ 
-                      display: 'flex', 
-                      alignItems: 'center',
-                      gap: 8,
-                      fontWeight: 700, 
-                      marginBottom: 10, 
-                      color: colors.text,
-                      fontSize: 14,
+                    <label style={{
+                      display: 'block',
+                      fontWeight: 'bold',
+                      marginBottom: theme.spacing.xs,
+                      color: colors.textSecondary,
+                      fontSize: theme.typography.fontSizes['2xs'],
                       textTransform: 'uppercase',
-                      letterSpacing: 0.5
+                      letterSpacing: '0.5px'
                     }}>
-                      <FaListAlt style={{ fontSize: 14, color: colors.accent }} />
                       Category
                     </label>
-                    <select 
-                      name="category" 
-                      value={packageForm.category} 
-                      onChange={handlePackageFormChange} 
-                      style={{ 
-                        width: '100%', 
-                        padding: '14px 16px', 
-                        borderRadius: 12, 
-                        border: `2px solid ${colors.border}`, 
-                        fontSize: 16, 
-                        background: colors.accentLight,
-                        transition: 'all 0.2s',
+                    <select
+                      name="category"
+                      value={packageForm.category}
+                      onChange={handlePackageFormChange}
+                      style={{
+                        width: '100%',
+                        padding: theme.spacing.sm,
+                        borderRadius: 0,
+                        border: `1px solid ${colors.border}`,
+                        fontSize: theme.typography.fontSizes.xs,
+                        background: colors.white,
                         outline: 'none',
-                        fontFamily: 'inherit',
-                        cursor: 'pointer',
-                        appearance: 'none',
-                        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
-                        backgroundRepeat: 'no-repeat',
-                        backgroundPosition: 'right 16px center',
-                        paddingRight: '40px'
-                      }}
-                      onFocus={(e) => {
-                        e.target.style.borderColor = colors.accent;
-                        e.target.style.boxShadow = `0 0 0 3px ${colors.accent}22`;
-                      }}
-                      onBlur={(e) => {
-                        e.target.style.borderColor = colors.border;
-                        e.target.style.boxShadow = 'none';
+                        cursor: 'pointer'
                       }}
                       required
                     >
-                  {CATEGORY_OPTIONS.map(opt => (
-                    <option key={opt} value={opt}>{opt}</option>
-                  ))}
-                </select>
-              </div>
+                      {CATEGORY_OPTIONS.map(opt => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
                 {/* Description Field */}
-                <div style={{ marginBottom: 28 }}>
-                  <label style={{ 
-                    display: 'flex', 
-                    alignItems: 'center',
-                    gap: 8,
-                    fontWeight: 700, 
-                    marginBottom: 10, 
-                    color: colors.text,
-                    fontSize: 14,
+                <div style={{ marginBottom: theme.spacing.xl }}>
+                  <label style={{
+                    display: 'block',
+                    fontWeight: 'bold',
+                    marginBottom: theme.spacing.xs,
+                    color: colors.textSecondary,
+                    fontSize: theme.typography.fontSizes['2xs'],
                     textTransform: 'uppercase',
-                    letterSpacing: 0.5
+                    letterSpacing: '0.5px'
                   }}>
-                    <FaAlignLeft style={{ fontSize: 14, color: colors.accent }} />
                     Description
                   </label>
-                  <textarea 
-                    name="description" 
-                    value={packageForm.description} 
-                    onChange={handlePackageFormChange} 
-                    placeholder="Enter package description (optional)..."
-                    rows="6"
-                    style={{ 
-                      width: '100%', 
-                      padding: '14px 16px', 
-                      borderRadius: 12, 
-                      border: `2px solid ${colors.border}`, 
-                      fontSize: 16, 
-                      background: colors.accentLight,
-                      minHeight: 150,
-                      resize: 'vertical',
-                      transition: 'all 0.2s',
+                  <textarea
+                    name="description"
+                    value={packageForm.description}
+                    onChange={handlePackageFormChange}
+                    placeholder="Enter package description..."
+                    rows="4"
+                    style={{
+                      width: '100%',
+                      padding: theme.spacing.sm,
+                      borderRadius: 0,
+                      border: `1px solid ${colors.border}`,
+                      fontSize: theme.typography.fontSizes.xs,
+                      background: colors.white,
                       outline: 'none',
-                      fontFamily: 'inherit'
-                    }}
-                    onFocus={(e) => {
-                      e.target.style.borderColor = colors.accent;
-                      e.target.style.boxShadow = `0 0 0 3px ${colors.accent}22`;
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = colors.border;
-                      e.target.style.boxShadow = 'none';
+                      resize: 'none',
+                      minHeight: 100
                     }}
                   />
                 </div>
 
                 {/* Error Message */}
                 {packageError && (
-                  <div style={{ 
-                    background: `${colors.dangerDark}15`,
-                    border: `2px solid ${colors.dangerDark}`,
-                    color: colors.dangerDark, 
-                    marginBottom: 20, 
-                    padding: '12px 16px',
-                    borderRadius: 12,
-                    fontWeight: 600, 
-                    fontSize: 14,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8
+                  <div style={{
+                    padding: theme.spacing.sm,
+                    background: colors.errorLight,
+                    color: colors.error,
+                    borderLeft: `3px solid ${colors.error}`,
+                    fontSize: theme.typography.fontSizes['2xs'],
+                    fontWeight: 'bold',
+                    marginBottom: theme.spacing.md
                   }}>
-                    <FaTimes style={{ fontSize: 14 }} />
                     {packageError}
-              </div>
+                  </div>
                 )}
 
                 {/* Action Buttons */}
-                <div style={{ 
-                  display: 'flex', 
-                  justifyContent: 'flex-end', 
-                  gap: 12,
-                  paddingTop: 8,
-                  borderTop: `1px solid ${colors.border}`
-                }}>
-                  <button 
-                    type="button" 
-                    onClick={closePackageModal} 
-                    style={{ 
-                      padding: '12px 28px', 
-                      background: colors.accentLight, 
-                      color: colors.text, 
-                      border: `2px solid ${colors.border}`,
-                      borderRadius: 12, 
-                      fontWeight: 700, 
-                      fontSize: 16,
-                      cursor: 'pointer',
-                      transition: 'all 0.2s'
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: theme.spacing.md }}>
+                  <button
+                    type="button"
+                    onClick={closePackageModal}
+                    style={{
+                      padding: `${theme.spacing.sm} ${theme.spacing.xl}`,
+                      background: colors.white,
+                      color: colors.textSecondary,
+                      border: `1px solid ${colors.border}`,
+                      borderRadius: 0,
+                      fontWeight: 'bold',
+                      fontSize: theme.typography.fontSizes['2xs'],
+                      textTransform: 'uppercase',
+                      cursor: 'pointer'
                     }}
-                    onMouseEnter={(e) => {
-                      e.target.style.background = colors.border;
-                      e.target.style.transform = 'translateY(-2px)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.background = colors.accentLight;
-                      e.target.style.transform = 'translateY(0)';
-                    }}
-                    disabled={loading}
                   >
                     Cancel
                   </button>
-                  <button 
-                    type="submit" 
-                    style={{ 
-                      padding: '12px 28px', 
-                      background: colors.accent, 
-                      color: '#fff', 
-                      border: 'none', 
-                      borderRadius: 12, 
-                      fontWeight: 700, 
-                      fontSize: 16,
-                      cursor: loading ? 'not-allowed' : 'pointer',
-                      transition: 'all 0.2s',
-                      opacity: loading ? 0.7 : 1,
-                      boxShadow: `0 4px 12px ${colors.accent}40`
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!loading) {
-                        e.target.style.transform = 'translateY(-2px)';
-                        e.target.style.boxShadow = `0 6px 16px ${colors.accent}60`;
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!loading) {
-                        e.target.style.transform = 'translateY(0)';
-                        e.target.style.boxShadow = `0 4px 12px ${colors.accent}40`;
-                      }
-                    }}
+                  <button
+                    type="submit"
                     disabled={loading}
+                    style={{
+                      padding: `${theme.spacing.sm} ${theme.spacing.xl}`,
+                      background: colors.sidebarBg,
+                      color: colors.white,
+                      border: 'none',
+                      borderRadius: 0,
+                      fontWeight: 'bold',
+                      fontSize: theme.typography.fontSizes['2xs'],
+                      textTransform: 'uppercase',
+                      cursor: loading ? 'not-allowed' : 'pointer'
+                    }}
                   >
-                    {loading ? 'Saving...' : (selectedPackage ? 'Save Changes' : 'Create Package')}
+                    {loading ? 'Processing...' : (selectedPackage ? 'Update Package' : 'Publish Package')}
                   </button>
-              </div>
+                </div>
             </form>
             </div>
           </div>

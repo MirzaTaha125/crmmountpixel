@@ -39,7 +39,7 @@ export default function UserInquiriesPanel({ colors, user }) {
       const headers = getAuthHeaders();
       const res = await axios.get(`${API_URL}/api/inquiries`, { headers });
       setInquiries(res.data);
-    } catch (err) {
+    } catch {
       setInquiriesError('Failed to fetch inquiries');
     } finally {
       setInquiriesLoading(false);

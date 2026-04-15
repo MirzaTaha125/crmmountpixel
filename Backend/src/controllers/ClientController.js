@@ -588,22 +588,50 @@ export async function getClientPendingInvoices(req, res) {
       });
     }
 
-    // Get all pending payment links for this client
+    // New Invoice model records
+    const InvoiceModel = (await import('../model/Invoice.js')).default;
+    const newInvoices = await InvoiceModel.find({
+      clientId: clientId,
+      status: { $in: ['Pending', 'Cancelled'] }
+    }).sort({ createdAt: -1 });
+
+    // Legacy: PaymentLink records (kept for backwards compat)
     const pendingInvoices = await PaymentLink.find({
       clientId: clientId,
       status: { $in: ['Pending', 'Expired'] }
     }).sort({ createdAt: -1 });
 
-    // Also get pending payment history records
+    // Legacy: PaymentHistory records
     const PaymentHistory = (await import('../model/PaymentHistory.js')).default;
     const pendingPayments = await PaymentHistory.find({
       clientId: clientId,
       status: 'Pending'
     }).sort({ createdAt: -1 });
 
+    // Merge newInvoices into invoices array, normalized to same shape ClientPanel expects
+    const normalizedNew = newInvoices.map(inv => ({
+      _id: inv._id,
+      clientName: inv.clientName,
+      clientId: inv.clientId,
+      packageName: inv.title,
+      packageDescription: inv.description,
+      packagePrice: inv.amount,
+      total: inv.amount,
+      status: inv.status,
+      invoiceNumber: inv.invoiceNumber,
+      brand: inv.brand,
+      linkId: null,                         // no /pay/ link for new invoices
+      paypalInvoiceUrl: inv.paypalInvoiceUrl,
+      paypalInvoiceStatus: inv.paypalInvoiceStatus,
+      createdAt: inv.createdAt,
+      expiresAt: null,
+      paidAt: inv.paidAt,
+      isNewInvoice: true,
+    }));
+
     res.status(200).json({
       message: "Pending invoices fetched successfully",
-      invoices: pendingInvoices,
+      invoices: [...normalizedNew, ...pendingInvoices],
       payments: pendingPayments
     });
   } catch (error) {

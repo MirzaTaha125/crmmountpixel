@@ -14,7 +14,8 @@ const connectDB = async () => {
             maxPoolSize: 10, // Maintain up to 10 socket connections
             minPoolSize: 5, // Maintain at least 5 socket connections
             retryWrites: true,
-            w: 'majority'
+            w: 'majority',
+            family: 4, // Force IPv4 DNS resolution
         };
 
         await mongoose.connect(process.env.MONGO_URI, options);

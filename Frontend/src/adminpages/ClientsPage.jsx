@@ -14,7 +14,7 @@ function ClientsPage({ colors: colorsProp }) {
   const colors = colorsProp || getColors();
   const { hasPermission, canDo } = usePermissions();
   const [clients, setClients] = useState([]);
-  const [users, setUsers] = useState([]);
+  const [_users, setUsers] = useState([]);
   const [clientModalOpen, setClientModalOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
   const [clientForm, setClientForm] = useState({ 
@@ -34,7 +34,7 @@ function ClientsPage({ colors: colorsProp }) {
   const [emailStatus, setEmailStatus] = useState('');
   const [filterName, setFilterName] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
-  const [filterEmployee, setFilterEmployee] = useState('');
+  const [filterEmployee, _setFilterEmployee] = useState('');
   const [filterBrand, setFilterBrand] = useState('');
   const [filterAssignment, setFilterAssignment] = useState(() => {
     // Check if there's a filter value from dashboard
@@ -73,7 +73,7 @@ function ClientsPage({ colors: colorsProp }) {
     try {
       const res = await axios.get(`${API_URL}/api/users`, { headers: getAuthHeaders() });
       setUsers((res.data || []).filter(u => u.Role === 'Employee'));
-    } catch (err) {}
+    } catch {}
   };
 
   const fetchClients = async (filters = {}) => {
@@ -97,7 +97,7 @@ function ClientsPage({ colors: colorsProp }) {
       const res = await axios.get(`${API_URL}/api/clients`, { params, headers: getAuthHeaders() });
       setClients(res.data.clients || []);
       setClientError('');
-    } catch (err) {
+    } catch {
       setClientError('Failed to fetch clients');
     } finally {
       setLoading(false);
@@ -122,7 +122,7 @@ function ClientsPage({ colors: colorsProp }) {
     setClientError('');
   };
 
-  const openClientEditModal = (client) => {
+  const _openClientEditModal = (client) => {
     setClientForm({
       name: client.name,
       email: client.email,
@@ -400,26 +400,57 @@ function ClientsPage({ colors: colorsProp }) {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: theme.spacing.xl,
+        marginBottom: theme.spacing.lg,
+        background: colors.white,
+        padding: theme.spacing.md,
+        borderRadius: theme.radius.lg,
+        border: `1px solid ${colors.borderLight}`,
+        boxShadow: theme.shadows.sm,
         flexWrap: 'wrap',
-        gap: theme.spacing.md,
-      }}>
+        gap: theme.spacing.md
+      }} className="clients-header">
+        <style>{`
+          @media (max-width: 600px) {
+            .clients-header {
+              flex-direction: column !important;
+              align-items: flex-start !important;
+            }
+            .clients-header > div:last-child {
+              width: 100% !important;
+              flex-direction: column !important;
+            }
+            .clients-header button {
+              width: 100% !important;
+              justify-content: center !important;
+            }
+            .clients-filters {
+              flex-direction: column !important;
+            }
+            .clients-filters > div, .clients-filters > select {
+              width: 100% !important;
+              min-width: 100% !important;
+            }
+          }
+        `}</style>
         <div>
           <h2 style={{
-            fontSize: theme.typography.fontSizes['3xl'],
-            fontWeight: theme.typography.fontWeights.bold,
+            fontSize: theme.typography.fontSizes.lg,
+            fontWeight: 'bold',
             color: colors.textPrimary,
             margin: 0,
-            marginBottom: theme.spacing.xs,
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px'
           }}>
-            Clients
+            Global Client Ledger
           </h2>
           <p style={{
-            fontSize: theme.typography.fontSizes.base,
-            color: colors.textSecondary,
+            fontSize: '10px',
+            color: colors.textTertiary,
             margin: 0,
+            fontWeight: 'bold',
+            textTransform: 'uppercase'
           }}>
-            {clients.length} {clients.length === 1 ? 'client' : 'clients'}
+            Comprehensive Business Entity Directory & Acquisition Mapping
           </p>
         </div>
         <div style={{ display: 'flex', gap: theme.spacing.md, alignItems: 'center' }}>
@@ -430,21 +461,21 @@ function ClientsPage({ colors: colorsProp }) {
               display: 'flex',
               alignItems: 'center',
               gap: theme.spacing.sm,
-              padding: `${theme.spacing.md} ${theme.spacing.xl}`,
+              padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
               background: clients.length === 0 || loading ? colors.border : '#059669',
               color: colors.white,
               border: 'none',
               borderRadius: theme.radius.md,
-              fontWeight: theme.typography.fontWeights.semibold,
-              fontSize: theme.typography.fontSizes.base,
+              fontWeight: theme.typography.fontWeights.bold,
+              fontSize: theme.typography.fontSizes.xs,
+              textTransform: 'uppercase',
               cursor: clients.length === 0 || loading ? 'not-allowed' : 'pointer',
-              boxShadow: theme.shadows.sm,
-              transition: `all ${theme.transitions.normal}`,
+              transition: `all ${theme.transitions.fast}`,
               opacity: clients.length === 0 || loading ? 0.6 : 1,
             }}
           >
             {loading ? <FaSpinner style={{ animation: 'spin 1s linear infinite' }} /> : <FaFileExcel />}
-            {loading ? 'Exporting...' : 'Export to Excel'}
+            {loading ? 'Exporting...' : 'Export Excel'}
           </button>
         {hasPermission('add_clients') && (
           <button
@@ -453,30 +484,20 @@ function ClientsPage({ colors: colorsProp }) {
               display: 'flex',
               alignItems: 'center',
               gap: theme.spacing.sm,
-              padding: `${theme.spacing.md} ${theme.spacing.xl}`,
+              padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
               background: colors.primary,
               color: colors.white,
               border: 'none',
               borderRadius: theme.radius.md,
-              fontWeight: theme.typography.fontWeights.semibold,
-              fontSize: theme.typography.fontSizes.base,
+              fontWeight: theme.typography.fontWeights.bold,
+              fontSize: theme.typography.fontSizes.xs,
+              textTransform: 'uppercase',
               cursor: 'pointer',
-              boxShadow: theme.shadows.sm,
-              transition: `all ${theme.transitions.normal}`,
-            }}
-            onMouseEnter={(e) => {
-              e.target.style.background = colors.primaryDark;
-              e.target.style.transform = 'translateY(-1px)';
-              e.target.style.boxShadow = theme.shadows.md;
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.background = colors.primary;
-              e.target.style.transform = 'translateY(0)';
-              e.target.style.boxShadow = theme.shadows.sm;
+              transition: `all ${theme.transitions.fast}`,
             }}
           >
             <FaPlus />
-            Add Client
+            Add New Client
           </button>
         )}
         </div>
@@ -490,9 +511,9 @@ function ClientsPage({ colors: colorsProp }) {
           color: colors.error,
           borderRadius: theme.radius.md,
           marginBottom: theme.spacing.lg,
-          border: `1px solid ${colors.error}`,
-          fontSize: theme.typography.fontSizes.sm,
-          fontWeight: theme.typography.fontWeights.medium,
+          borderLeft: `4px solid ${colors.error}`,
+          fontSize: theme.typography.fontSizes.xs,
+          fontWeight: theme.typography.fontWeights.bold
         }}>
           {clientError}
         </div>
@@ -504,7 +525,7 @@ function ClientsPage({ colors: colorsProp }) {
         gap: theme.spacing.md,
         marginBottom: theme.spacing.xl,
         flexWrap: 'wrap',
-      }}>
+      }} className="clients-filters">
         <div style={{ position: 'relative', flex: 1, minWidth: '200px' }}>
           <FaSearch style={{
             position: 'absolute',
@@ -512,47 +533,40 @@ function ClientsPage({ colors: colorsProp }) {
             top: '50%',
             transform: 'translateY(-50%)',
             color: colors.textTertiary,
-            fontSize: theme.typography.fontSizes.sm,
+            fontSize: theme.typography.fontSizes.xs,
           }} />
           <input
             type="text"
-            placeholder="Search by name or client ID (e.g., ADE001)..."
+            placeholder="Search by name or client ID..."
             value={filterName}
             onChange={e => setFilterName(e.target.value)}
             style={{
               width: '100%',
-              padding: `${theme.spacing.sm} ${theme.spacing.md} ${theme.spacing.sm} ${theme.spacing['2xl']}`,
+              padding: `${theme.spacing.sm} ${theme.spacing.md} ${theme.spacing.sm} ${theme.spacing.xl}`,
               borderRadius: theme.radius.md,
               border: `1px solid ${colors.border}`,
-              fontSize: theme.typography.fontSizes.base,
+              fontSize: theme.typography.fontSizes.xs,
               color: colors.textPrimary,
               background: colors.white,
-              transition: `all ${theme.transitions.normal}`,
-            }}
-            onFocus={(e) => {
-              e.target.style.borderColor = colors.primary;
-              e.target.style.boxShadow = `0 0 0 3px ${colors.primaryBg}`;
-            }}
-            onBlur={(e) => {
-              e.target.style.borderColor = colors.border;
-              e.target.style.boxShadow = 'none';
+              outline: 'none'
             }}
           />
         </div>
-        <select
-          value={filterStatus}
-          onChange={e => setFilterStatus(e.target.value)}
-          style={{
-            padding: `${theme.spacing.sm} ${theme.spacing.md}`,
-            borderRadius: theme.radius.md,
-            border: `1px solid ${colors.border}`,
-            fontSize: theme.typography.fontSizes.base,
-            color: colors.textPrimary,
-            background: colors.white,
-            cursor: 'pointer',
-            minWidth: '150px',
-          }}
-        >
+          <select
+            value={filterStatus}
+            onChange={e => setFilterStatus(e.target.value)}
+            style={{
+              padding: theme.spacing.sm,
+              borderRadius: theme.radius.md,
+              border: `1px solid ${colors.border}`,
+              fontSize: theme.typography.fontSizes.xs,
+              color: colors.textPrimary,
+              background: colors.white,
+              cursor: 'pointer',
+              minWidth: '120px',
+              outline: 'none'
+            }}
+          >
           <option value="">All Status</option>
           <option value="Active">Active</option>
           <option value="Processing">Processing</option>
@@ -563,14 +577,15 @@ function ClientsPage({ colors: colorsProp }) {
           value={filterBrand}
           onChange={e => setFilterBrand(e.target.value)}
           style={{
-            padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+            padding: theme.spacing.sm,
             borderRadius: theme.radius.md,
             border: `1px solid ${colors.border}`,
-            fontSize: theme.typography.fontSizes.base,
+            fontSize: theme.typography.fontSizes.xs,
             color: colors.textPrimary,
             background: colors.white,
             cursor: 'pointer',
-            minWidth: '180px',
+            minWidth: '150px',
+            outline: 'none'
           }}
         >
           <option value="">All Brands</option>
@@ -582,14 +597,15 @@ function ClientsPage({ colors: colorsProp }) {
           value={filterAssignment}
           onChange={e => setFilterAssignment(e.target.value)}
           style={{
-            padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+            padding: theme.spacing.sm,
             borderRadius: theme.radius.md,
             border: `1px solid ${colors.border}`,
-            fontSize: theme.typography.fontSizes.base,
+            fontSize: theme.typography.fontSizes.xs,
             color: colors.textPrimary,
             background: colors.white,
             cursor: 'pointer',
-            minWidth: '150px',
+            minWidth: '120px',
+            outline: 'none'
           }}
         >
           <option value="">All Clients</option>
@@ -627,40 +643,44 @@ function ClientsPage({ colors: colorsProp }) {
       ) : (
         <div style={{
           background: colors.white,
-          borderRadius: theme.radius.xl,
+          borderRadius: theme.radius.lg,
           border: `1px solid ${colors.borderLight}`,
           overflow: 'hidden',
-          boxShadow: theme.shadows.sm,
+          boxShadow: theme.shadows.md,
+          width: '100%',
         }}>
-          <div style={{ overflowX: 'auto' }}>
+          <div style={{ 
+            overflowX: 'auto',
+            WebkitOverflowScrolling: 'touch',
+            width: '100%',
+          }}>
             <table style={{
               width: '100%',
               borderCollapse: 'collapse',
             }}>
-              <thead style={{
-                background: colors.primaryBg,
-                borderBottom: `1px solid ${colors.border}`,
-              }}>
+              <thead style={{ background: colors.tableHeaderBg }}>
                 <tr>
                   {[
-                    'Client ID',
+                    'ID',
                     canDo('view_client_name') && 'Name',
                     canDo('view_client_email') && 'Email',
                     canDo('view_client_phone') && 'Phone',
                     'Company',
                     'Brand',
                     'Status',
-                    'Created',
+                    'Date',
                     'Actions'
-                  ].filter(Boolean).map(header => (
+                  ].filter(Boolean).map((header, idx, arr) => (
                     <th key={header} style={{
-                      padding: theme.spacing.md,
+                      padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
                       textAlign: 'left',
-                      fontWeight: theme.typography.fontWeights.semibold,
-                      fontSize: theme.typography.fontSizes.sm,
-                      color: colors.textSecondary,
+                      fontWeight: 'bold',
+                      fontSize: '9px',
+                      color: colors.textPrimary,
                       textTransform: 'uppercase',
-                      letterSpacing: '0.05em',
+                      letterSpacing: '1px',
+                      borderBottom: `2px solid ${colors.border}`,
+                      borderRight: idx < arr.length - 1 ? `1px solid ${colors.border}` : 'none'
                     }}>
                       {header}
                     </th>
@@ -689,55 +709,58 @@ function ClientsPage({ colors: colorsProp }) {
                   >
                     <td style={{
                       padding: theme.spacing.md,
-                      fontWeight: theme.typography.fontWeights.semibold,
-                      color: colors.primary,
+                      fontWeight: theme.typography.fontWeights.bold,
+                      color: colors.sidebarActive,
                       fontFamily: 'monospace',
+                      fontSize: theme.typography.fontSizes.xs
                     }}>
                       {client.clientId || '-'}
                     </td>
                     {canDo('view_client_name') && (
                     <td style={{
                       padding: theme.spacing.md,
-                      fontWeight: theme.typography.fontWeights.semibold,
+                      fontWeight: theme.typography.fontWeights.bold,
+                      fontSize: theme.typography.fontSizes.sm,
                       color: colors.textPrimary,
                     }}>
                       {client.name}
                     </td>
                     )}
                     {canDo('view_client_email') && (
-                    <td style={{ padding: theme.spacing.md, color: colors.textSecondary }}>
+                    <td style={{ padding: theme.spacing.md, fontSize: theme.typography.fontSizes.xs, color: colors.textSecondary }}>
                       {client.email}
                     </td>
                     )}
                     {canDo('view_client_phone') && (
-                    <td style={{ padding: theme.spacing.md, color: colors.textSecondary }}>
+                    <td style={{ padding: theme.spacing.md, fontSize: theme.typography.fontSizes.xs, color: colors.textSecondary }}>
                       {client.phone}
                     </td>
                     )}
-                    <td style={{ padding: theme.spacing.md, color: colors.textSecondary }}>
+                    <td style={{ padding: theme.spacing.md, fontSize: theme.typography.fontSizes.xs, color: colors.textSecondary }}>
                       {client.companyName || '-'}
                     </td>
-                    <td style={{ padding: theme.spacing.md, color: colors.textSecondary }}>
+                    <td style={{ padding: theme.spacing.md, fontSize: theme.typography.fontSizes.xs, color: colors.textSecondary }}>
                       {client.brand || '-'}
                     </td>
                     <td style={{ padding: theme.spacing.md }}>
                       <span style={{
                         display: 'inline-block',
-                        padding: `${theme.spacing.xs} ${theme.spacing.md}`,
+                        padding: `2px 10px`,
                         borderRadius: theme.radius.full,
-                        fontSize: theme.typography.fontSizes.xs,
-                        fontWeight: theme.typography.fontWeights.medium,
-                        background: client.status === 'Active' ? colors.successLight : 
-                                   client.status === 'Processing' ? colors.infoLight :
-                                   client.status === 'Completed' ? colors.successLight : colors.warningLight,
+                        fontSize: theme.typography.fontSizes['2xs'],
+                        fontWeight: theme.typography.fontWeights.bold,
+                        background: client.status === 'Active' ? colors.successBg : 
+                                   client.status === 'Processing' ? colors.infoBg :
+                                   client.status === 'Completed' ? colors.successBg : colors.warningBg,
                         color: client.status === 'Active' ? colors.success :
                                client.status === 'Processing' ? colors.info :
                                client.status === 'Completed' ? colors.success : colors.warning,
+                        textTransform: 'uppercase'
                       }}>
                         {client.status}
                       </span>
                     </td>
-                    <td style={{ padding: theme.spacing.md, color: colors.textSecondary }}>
+                    <td style={{ padding: theme.spacing.md, fontSize: theme.typography.fontSizes.xs, color: colors.textSecondary }}>
                       {client.createdAt ? new Date(client.createdAt).toLocaleDateString() : '-'}
                     </td>
                     <td style={{ padding: theme.spacing.md, position: 'relative' }} onClick={(e) => e.stopPropagation()}>
@@ -752,8 +775,8 @@ function ClientsPage({ colors: colorsProp }) {
                             border: 'none',
                             cursor: 'pointer',
                             padding: '4px 8px',
-                            borderRadius: theme.radius.sm,
-                            fontSize: '18px',
+                            borderRadius: 0,
+                            fontSize: '16px',
                             color: colors.textPrimary,
                             display: 'flex',
                             alignItems: 'center',
@@ -897,7 +920,7 @@ function ClientsPage({ colors: colorsProp }) {
             background: colors.white,
             borderRadius: theme.radius['2xl'],
             boxShadow: theme.shadows.xl,
-            width: '100%',
+            width: '95%',
             maxWidth: '600px',
             maxHeight: '90vh',
             overflow: 'auto',

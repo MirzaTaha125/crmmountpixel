@@ -5,11 +5,11 @@ import { theme, getColors } from '../theme';
 import { FaUsers, FaUserTie, FaUser, FaBoxOpen, FaEnvelope, FaCreditCard, FaDollarSign, FaChartLine, FaTachometerAlt, FaUserCog, FaMoneyCheckAlt, FaCalendarAlt, FaShieldAlt, FaArrowUp, FaArrowDown, FaCheckCircle, FaClock, FaTimesCircle, FaFileInvoice, FaUserCheck, FaUserTimes, FaBell } from 'react-icons/fa';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area } from 'recharts';
 
-function DashboardPage({ clients, users, employees, salaries, colors: colorsProp, user, setActiveTab }) {
+function DashboardPage({ clients, users, employees, colors: colorsProp, user, setActiveTab }) {
   const colors = colorsProp || getColors();
-  const [mostPopularPackage, setMostPopularPackage] = useState('');
-  const [recentInquiries, setRecentInquiries] = useState([]);
-  const [recentPaymentLinks, setRecentPaymentLinks] = useState([]);
+  const [_mostPopularPackage, setMostPopularPackage] = useState('');
+  const [_recentInquiries, setRecentInquiries] = useState([]);
+  const [_recentPaymentLinks, setRecentPaymentLinks] = useState([]);
   const [allCustomPackages, setAllCustomPackages] = useState([]);
   const [allPaymentLinks, setAllPaymentLinks] = useState([]);
   const [allPaymentHistory, setAllPaymentHistory] = useState([]);
@@ -256,12 +256,12 @@ function DashboardPage({ clients, users, employees, salaries, colors: colorsProp
   // Get recent items
   const filteredRecentClients = [...filteredClients].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)).slice(0, 5);
   const filteredInquiries = [...filteredInquiriesData].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)).slice(0, 5);
-  const filteredPaymentLinks = [...filteredPaymentLinksData].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)).slice(0, 5);
+  const _filteredPaymentLinks = [...filteredPaymentLinksData].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)).slice(0, 5);
 
   // Calculate statistics
   const totalClients = filteredClients.length;
   const totalEmployees = filteredEmployees.length;
-  const totalUsers = filteredUsers.length;
+  const _totalUsers = filteredUsers.length;
   const customPackagesCount = filteredCustomPackages.length;
   const inquiriesCount = filteredInquiriesData.length;
   
@@ -295,13 +295,14 @@ function DashboardPage({ clients, users, employees, salaries, colors: colorsProp
     return sum + total;
   }, 0);
   
-  const pendingRevenue = pendingPayments.reduce((sum, p) => {
+  const _pendingRevenue = pendingPayments.reduce((sum, p) => {
     const amount = typeof p.total === 'number' ? p.total : parseFloat(p.total);
     return sum + (isNaN(amount) ? 0 : amount);
   }, 0);
   const totalPayments = filteredPaymentLinksData.length;
   // For success rate, count paid payments from the filtered set (matching date filter context)
   const paidPaymentsCount = filteredPaymentLinksData.filter(p => p.status === 'Paid').length;
+  // eslint-disable-next-line no-unused-vars
   const paymentSuccessRate = totalPayments > 0 ? ((paidPaymentsCount / totalPayments) * 100).toFixed(1) : 0;
 
   // Calculate growth (comparing current month vs last month)
@@ -505,14 +506,17 @@ function DashboardPage({ clients, users, employees, salaries, colors: colorsProp
   ];
 
   // Payment Status Distribution (for PaymentLinks)
+  // eslint-disable-next-line no-unused-vars
   const paymentStatusData = [
     { label: 'Paid', value: filteredPaymentLinksData.filter(p => p.status === 'Paid').length, color: '#10b981', percentage: totalPayments > 0 ? (filteredPaymentLinksData.filter(p => p.status === 'Paid').length / totalPayments * 100).toFixed(0) : 0 },
     { label: 'Pending', value: pendingPayments.length, color: '#f59e0b', percentage: totalPayments > 0 ? (pendingPayments.length / totalPayments * 100).toFixed(0) : 0 },
     { label: 'Expired', value: expiredPayments.length, color: '#dc2626', percentage: totalPayments > 0 ? (expiredPayments.length / totalPayments * 100).toFixed(0) : 0 },
   ];
 
+  const _notifDetailEnabled = false; // disabled section
+
   return (
-    <div 
+    <div
       style={{ width: '100%', fontFamily: theme.typography.fontFamily }}
       onClick={(e) => {
         if (showNotifications && !e.target.closest('[data-notification-container]')) {
@@ -522,23 +526,14 @@ function DashboardPage({ clients, users, employees, salaries, colors: colorsProp
     >
       <style>{`
         @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
         .fade-in {
-          animation: fadeIn 0.4s ease-out;
+          animation: fadeIn 0.3s ease-out;
         }
-        .card-hover {
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .card-hover:hover {
-          transform: translateY(-4px);
-          box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
-        }
-        @media (max-width: 768px) {
-          .card-hover:hover {
-            transform: none;
-          }
+        .data-row:hover {
+          background-color: ${colors.borderLight};
         }
       `}</style>
     <div style={{ width: '100%', fontFamily: theme.typography.fontFamily }}>
@@ -547,32 +542,31 @@ function DashboardPage({ clients, users, employees, salaries, colors: colorsProp
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-          marginBottom: theme.spacing['2xl'],
-        flexWrap: 'wrap',
-        gap: theme.spacing.md,
+        marginBottom: theme.spacing.lg,
+        background: colors.white,
+        padding: theme.spacing.md,
+        borderRadius: theme.radius.lg,
+        border: `1px solid ${colors.borderLight}`,
+        boxShadow: theme.shadows.sm,
       }}>
         <div>
           <h2 style={{
-            fontSize: theme.typography.fontSizes['3xl'],
+            fontSize: theme.typography.fontSizes.xl,
             fontWeight: theme.typography.fontWeights.bold,
             color: colors.textPrimary,
             margin: 0,
-            marginBottom: theme.spacing.xs,
-            lineHeight: theme.typography.lineHeights.tight,
-              background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.primaryDark} 100%)`,
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text'
+            textTransform: 'uppercase',
+            letterSpacing: '1px'
           }}>
-            Welcome back, {user?.First_Name}!
+            Dashboard Overview
           </h2>
           <p style={{
-            fontSize: theme.typography.fontSizes.base,
+            fontSize: theme.typography.fontSizes.xs,
             color: colors.textSecondary,
             margin: 0,
             fontWeight: theme.typography.fontWeights.medium,
           }}>
-              Here's what's happening with your business today
+            Real-time business performance analytics for {user?.First_Name}
           </p>
         </div>
 
@@ -582,7 +576,19 @@ function DashboardPage({ clients, users, employees, salaries, colors: colorsProp
           alignItems: 'center',
           gap: theme.spacing.sm,
           flexWrap: 'wrap',
-        }}>
+          width: '100%',
+          justifyContent: 'flex-start',
+          marginTop: theme.spacing.md,
+        }} className="dashboard-mobile-header-stack">
+          <style>{`
+            @media (min-width: 901px) {
+              .dashboard-mobile-header-stack {
+                width: auto !important;
+                margin-top: 0 !important;
+                justify-content: flex-end !important;
+              }
+            }
+          `}</style>
           {/* Notification Icon */}
           <div style={{ position: 'relative' }} data-notification-container>
             <button
@@ -595,7 +601,7 @@ function DashboardPage({ clients, users, employees, salaries, colors: colorsProp
               style={{
                 position: 'relative',
                 background: 'transparent',
-                border: 'none',
+                border: `1px solid ${colors.border}`,
                 cursor: 'pointer',
                 padding: theme.spacing.sm,
                 borderRadius: theme.radius.md,
@@ -647,8 +653,9 @@ function DashboardPage({ clients, users, employees, salaries, colors: colorsProp
                 border: `1px solid ${colors.border}`,
                 borderRadius: theme.radius.lg,
                 boxShadow: theme.shadows.xl,
-                width: '380px',
-                maxHeight: '500px',
+                width: '400px',
+                maxWidth: 'calc(100vw - 32px)',
+                maxHeight: '600px',
                 overflowY: 'auto',
                 zIndex: 1000,
               }}>
@@ -658,7 +665,8 @@ function DashboardPage({ clients, users, employees, salaries, colors: colorsProp
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
-                  background: colors.primaryBg,
+                  background: colors.tableHeaderBg,
+                  borderRadius: `${theme.radius.lg} ${theme.radius.lg} 0 0`,
                 }}>
                   <h3 style={{
                     margin: 0,
@@ -670,14 +678,14 @@ function DashboardPage({ clients, users, employees, salaries, colors: colorsProp
                   </h3>
                   {unreadCount > 0 && (
                     <span style={{
-                      background: colors.error,
+                      background: colors.sidebarActive,
                       color: colors.white,
-                      padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
+                      padding: `2px 8px`,
                       borderRadius: theme.radius.full,
-                      fontSize: theme.typography.fontSizes.xs,
+                      fontSize: theme.typography.fontSizes['2xs'],
                       fontWeight: theme.typography.fontWeights.bold,
                     }}>
-                      {unreadCount} new
+                      {unreadCount} NEW
                     </span>
                   )}
                 </div>
@@ -753,7 +761,7 @@ function DashboardPage({ clients, users, employees, salaries, colors: colorsProp
                             }}>
                               {notif.description || notif.details?.clientName || 'Notification'}
                             </div>
-                            {false && (
+                            {_notifDetailEnabled && (
                               <div style={{
                                 fontSize: theme.typography.fontSizes.xs,
                                 color: colors.info,
@@ -810,9 +818,10 @@ function DashboardPage({ clients, users, employees, salaries, colors: colorsProp
               padding: `${theme.spacing.sm} ${theme.spacing.md}`,
               borderRadius: theme.radius.md,
               border: `1px solid ${colors.border}`,
-              fontSize: theme.typography.fontSizes.sm,
-                background: colors.white,
-                color: colors.textPrimary
+              fontSize: theme.typography.fontSizes.xs,
+              background: colors.white,
+              color: colors.textPrimary,
+              outline: 'none'
             }}
           />
           <input
@@ -823,23 +832,25 @@ function DashboardPage({ clients, users, employees, salaries, colors: colorsProp
               padding: `${theme.spacing.sm} ${theme.spacing.md}`,
               borderRadius: theme.radius.md,
               border: `1px solid ${colors.border}`,
-              fontSize: theme.typography.fontSizes.sm,
-                background: colors.white,
-                color: colors.textPrimary
+              fontSize: theme.typography.fontSizes.xs,
+              background: colors.white,
+              color: colors.textPrimary,
+              outline: 'none'
             }}
           />
           <button
             onClick={() => { setDateFrom(''); setDateTo(''); setAllTime(true); }}
             style={{
               padding: `${theme.spacing.sm} ${theme.spacing.md}`,
-                background: allTime ? `linear-gradient(135deg, ${colors.primary} 0%, ${colors.primaryDark} 100%)` : colors.white,
+              background: allTime ? colors.sidebarBg : colors.white,
               color: allTime ? colors.white : colors.textPrimary,
               border: `1px solid ${colors.border}`,
               borderRadius: theme.radius.md,
-              fontWeight: theme.typography.fontWeights.semibold,
-              fontSize: theme.typography.fontSizes.sm,
+              fontWeight: theme.typography.fontWeights.bold,
+              fontSize: theme.typography.fontSizes.xs,
               cursor: 'pointer',
-                transition: 'all 0.2s ease'
+              textTransform: 'uppercase',
+              transition: 'all 0.2s ease'
             }}
           >
             All Time
@@ -847,200 +858,132 @@ function DashboardPage({ clients, users, employees, salaries, colors: colorsProp
         </div>
       </div>
 
-      {/* Stats Grid */}
-        <div className="fade-in" style={{
+      <div style={{
         display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-          gap: theme.spacing.xl,
-          marginBottom: theme.spacing['2xl']
+        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+        gap: theme.spacing.lg,
+        marginBottom: theme.spacing.xl,
       }}>
-        {stats.map((stat, idx) => {
-          const Icon = stat.icon;
-          return (
-            <div
-              key={idx}
-                className="card-hover"
-              onClick={() => {
-                if (setActiveTab && stat.tabId) {
-                  setActiveTab(stat.tabId);
-                  // Store filter value in localStorage if it exists
-                  if (stat.filterValue) {
-                    localStorage.setItem('clientsPageFilterAssignment', stat.filterValue);
-                  }
+        {stats.map((stat, idx) => (
+          <div
+            key={idx}
+            onClick={() => {
+              if (stat.tabId) {
+                if (stat.filterValue) {
+                  localStorage.setItem('clientsPageFilterAssignment', stat.filterValue);
                 }
-              }}
-              style={{
-                  background: `linear-gradient(135deg, ${colors.white} 0%, ${colors.white} 100%)`,
-                borderRadius: theme.radius.xl,
-                padding: theme.spacing.xl,
-                border: `1px solid ${colors.borderLight}`,
-                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
-                  position: 'relative',
-                  overflow: 'hidden',
-                  cursor: stat.tabId ? 'pointer' : 'default'
-                }}
-              >
-                {/* Decorative corner icon shadow */}
-                <div style={{
-                  position: 'absolute',
-                  top: '-20px',
-                  right: '-20px',
-                  width: '140px',
-                  height: '140px',
-                  opacity: 0.15,
-                  zIndex: 0
-                }}>
-                  <Icon style={{ 
-                    fontSize: '140px', 
-                    color: stat.color,
-                    transform: 'rotate(-15deg)'
-                  }} />
-                </div>
-                <div style={{
-                  position: 'absolute',
-                  top: 0,
-                  right: 0,
-                  width: '120px',
-                  height: '120px',
-                  background: `linear-gradient(135deg, ${stat.bg} 0%, transparent 100%)`,
-                  borderRadius: '0 0 0 100%',
-                  opacity: 0.3
-                }} />
-                
-                <div style={{ position: 'relative', zIndex: 1 }}>
+                setActiveTab(stat.tabId);
+              }
+            }}
+            style={{
+              background: colors.white,
+              padding: theme.spacing.xl,
+              borderRadius: theme.radius.lg,
+              border: `1px solid ${colors.borderLight}`,
+              boxShadow: theme.shadows.sm,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: theme.spacing.sm,
+              cursor: stat.tabId ? 'pointer' : 'default',
+              transition: `all ${theme.transitions.normal}`,
+            }}
+            onMouseEnter={(e) => {
+              if (stat.tabId) {
+                e.currentTarget.style.transform = 'translateY(-4px)';
+                e.currentTarget.style.boxShadow = theme.shadows.md;
+                e.currentTarget.style.borderColor = stat.color;
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (stat.tabId) {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = theme.shadows.sm;
+                e.currentTarget.style.borderColor = colors.borderLight;
+              }
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div style={{
+                background: stat.bg,
+                color: stat.color,
+                padding: theme.spacing.sm,
+                borderRadius: theme.radius.md,
+                fontSize: '24px',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'space-between',
-                    marginBottom: theme.spacing.md
+                justifyContent: 'center'
               }}>
+                {React.createElement(stat.icon)}
+              </div>
+              {stat.growth !== undefined && (
                 <div style={{
-                      width: '56px',
-                      height: '56px',
-                      borderRadius: '16px',
-                  background: stat.bg,
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  color: stat.color,
-                      fontSize: '24px',
-                      boxShadow: `0 4px 12px ${stat.color}30`
+                  gap: '4px',
+                  color: stat.growth >= 0 ? colors.success : colors.error,
+                  fontSize: theme.typography.fontSizes.xs,
+                  fontWeight: 'bold',
+                  background: stat.growth >= 0 ? colors.successBg : colors.errorBg,
+                  padding: '4px 8px',
+                  borderRadius: theme.radius.full
                 }}>
-                  <Icon />
+                  {stat.growth >= 0 ? <FaArrowUp /> : <FaArrowDown />}
+                  {Math.abs(stat.growth)}%
                 </div>
-                    {stat.growth !== undefined && (
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: theme.spacing.xs,
-                        padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
-                        borderRadius: theme.radius.full,
-                        background: parseFloat(stat.growth) >= 0 ? colors.successBg : colors.errorBg,
-                        color: parseFloat(stat.growth) >= 0 ? colors.success : colors.error,
-                        fontSize: theme.typography.fontSizes.xs,
-                        fontWeight: theme.typography.fontWeights.semibold
-                      }}>
-                        {parseFloat(stat.growth) >= 0 ? <FaArrowUp style={{ fontSize: '10px' }} /> : <FaArrowDown style={{ fontSize: '10px' }} />}
-                        {Math.abs(parseFloat(stat.growth))}%
-                      </div>
-                    )}
-              </div>
-              <div style={{
-                display: 'flex',
-                alignItems: 'baseline',
-                gap: theme.spacing.md,
-                marginBottom: theme.spacing.xs,
-                flexWrap: 'wrap'
-              }}>
-                <div style={{
-                  fontSize: theme.typography.fontSizes['3xl'],
-                  fontWeight: theme.typography.fontWeights.bold,
-                  color: colors.textPrimary,
-                  lineHeight: 1.2
-                }}>
-                  {stat.value}
-                </div>
-                {stat.currentMonthValue && stat.lastMonthValue && (
-                  <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: theme.spacing.xs,
-                    alignItems: 'flex-start'
-                  }}>
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: theme.spacing.xs
-                    }}>
-                      <span style={{
-                        fontSize: theme.typography.fontSizes.xs,
-                        color: colors.textSecondary,
-                        fontWeight: theme.typography.fontWeights.medium
-                      }}>
-                        This Month:
-                      </span>
-                      <span style={{
-                        fontSize: theme.typography.fontSizes.sm,
-                        color: colors.success,
-                        fontWeight: theme.typography.fontWeights.semibold
-                      }}>
-                        {stat.currentMonthValue}
-                      </span>
-                    </div>
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: theme.spacing.xs
-                    }}>
-                      <span style={{
-                        fontSize: theme.typography.fontSizes.xs,
-                        color: colors.textSecondary,
-                        fontWeight: theme.typography.fontWeights.medium
-                      }}>
-                        Last Month:
-                      </span>
-                      <span style={{
-                        fontSize: theme.typography.fontSizes.sm,
-                        color: colors.textSecondary,
-                        fontWeight: theme.typography.fontWeights.medium
-                      }}>
-                        {stat.lastMonthValue}
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
-              <div style={{
-                    fontSize: theme.typography.fontSizes.base,
+              )}
+            </div>
+            
+            <div>
+              <div style={{ 
+                fontSize: theme.typography.fontSizes.xs, 
                 color: colors.textSecondary,
                 fontWeight: theme.typography.fontWeights.medium,
-                    marginBottom: theme.spacing.xs
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px'
               }}>
                 {stat.label}
-                  </div>
-                  {stat.subValue && (
-                    <div style={{
-                      fontSize: theme.typography.fontSizes.sm,
-                      color: colors.textSecondary,
-                      marginTop: theme.spacing.xs
-                    }}>
-                      {stat.subValue}
-                    </div>
-                  )}
-                  {stat.growthLabel && (
-                    <div style={{
-                      fontSize: theme.typography.fontSizes.xs,
-                      color: colors.textSecondary,
-                      marginTop: theme.spacing.xs,
-                      opacity: 0.7
-                    }}>
-                      {stat.growthLabel}
-                    </div>
-                  )}
+              </div>
+              <div style={{ 
+                fontSize: theme.typography.fontSizes.xl, 
+                fontWeight: 'bold', 
+                color: colors.textPrimary,
+                marginTop: '4px'
+              }}>
+                {stat.value}
               </div>
             </div>
-          );
-        })}
+
+            {stat.subValue && (
+              <div style={{ 
+                fontSize: theme.typography.fontSizes['2xs'], 
+                color: colors.textTertiary,
+                fontWeight: theme.typography.fontWeights.bold,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}>
+                <FaCheckCircle style={{ color: colors.success }} />
+                {stat.subValue}
+              </div>
+            )}
+            
+            {(stat.currentMonthValue || stat.lastMonthValue) && (
+              <div style={{ 
+                fontSize: '11px', 
+                color: colors.textTertiary,
+                borderTop: `1px solid ${colors.borderLight}`,
+                paddingTop: theme.spacing.xs,
+                marginTop: theme.spacing.xs,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '2px'
+              }}>
+                {stat.currentMonthValue && <div>This Month: <span style={{ color: colors.textPrimary, fontWeight: 'bold' }}>{stat.currentMonthValue}</span></div>}
+                {stat.lastMonthValue && <div>Last Month: <span style={{ color: colors.textSecondary }}>{stat.lastMonthValue}</span></div>}
+              </div>
+            )}
+          </div>
+        ))}
       </div>
 
         {/* Analytics Section */}
@@ -1050,50 +993,30 @@ function DashboardPage({ clients, users, employees, salaries, colors: colorsProp
           gap: theme.spacing.xl,
           marginBottom: theme.spacing['2xl']
         }}>
-          {/* Revenue Analytics Card */}
           <div style={{
-            background: `linear-gradient(135deg, ${colors.white} 0%, ${colors.white} 100%)`,
-            borderRadius: theme.radius.xl,
-            border: `1px solid ${colors.borderLight}`,
-            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
+            background: colors.white,
+            border: `1px solid ${colors.border}`,
+            borderRadius: theme.radius.lg,
             overflow: 'hidden',
-            position: 'relative'
+            boxShadow: theme.shadows.lg,
           }}>
-            {/* Decorative corner icon */}
             <div style={{
-              position: 'absolute',
-              top: '-20px',
-              right: '-20px',
-              width: '140px',
-              height: '140px',
-              opacity: 0.1,
-              zIndex: 0
+              padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
+              background: colors.sidebarBg,
+              display: 'flex',
+              alignItems: 'center',
+              gap: theme.spacing.sm
             }}>
-              <FaChartLine style={{ 
-                fontSize: '140px', 
-                color: '#10b981',
-                transform: 'rotate(-15deg)'
-              }} />
-            </div>
-            
-            <div style={{
-              padding: theme.spacing.xl,
-              borderBottom: `1px solid ${colors.borderLight}`,
-              background: `linear-gradient(135deg, ${colors.successBg} 0%, transparent 100%)`,
-              position: 'relative',
-              zIndex: 1
-            }}>
+              <FaChartLine style={{ color: colors.sidebarActive }} />
               <h3 style={{
                 margin: 0,
-                fontSize: theme.typography.fontSizes.xl,
+                fontSize: theme.typography.fontSizes.xs,
                 fontWeight: theme.typography.fontWeights.bold,
-                color: colors.textPrimary,
-                display: 'flex',
-                alignItems: 'center',
-                gap: theme.spacing.sm
+                color: colors.sidebarText,
+                textTransform: 'uppercase',
+                letterSpacing: '1px'
               }}>
-                <FaChartLine style={{ color: '#10b981' }} />
-                Revenue Analytics
+                Market Performance
               </h3>
             </div>
             <div style={{ padding: theme.spacing.xl, position: 'relative', zIndex: 1 }}>
@@ -1112,9 +1035,10 @@ function DashboardPage({ clients, users, employees, salaries, colors: colorsProp
                     gap: theme.spacing.md
                   }}>
                     <h4 style={{
-                      fontSize: theme.typography.fontSizes.base,
-                      fontWeight: theme.typography.fontWeights.semibold,
-                      color: colors.textPrimary,
+                      fontSize: theme.typography.fontSizes.xs,
+                      fontWeight: theme.typography.fontWeights.bold,
+                      color: colors.textSecondary,
+                      textTransform: 'uppercase',
                       margin: 0
                     }}>
                       {getChartTitle()}
@@ -1130,12 +1054,12 @@ function DashboardPage({ clients, users, employees, salaries, colors: colorsProp
                         value={chartFilterType}
                         onChange={(e) => setChartFilterType(e.target.value)}
                         style={{
-                          padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
+                          padding: theme.spacing.xs,
                           borderRadius: theme.radius.md,
                           border: `1px solid ${colors.border}`,
                           backgroundColor: colors.white,
                           color: colors.textPrimary,
-                          fontSize: theme.typography.fontSizes.sm,
+                          fontSize: theme.typography.fontSizes.xs,
                           cursor: 'pointer',
                           outline: 'none'
                         }}
@@ -1392,23 +1316,10 @@ function DashboardPage({ clients, users, employees, salaries, colors: colorsProp
               width: '100%',
                 borderCollapse: 'collapse'
             }}>
-              <thead style={{
-                background: colors.primaryBg,
-                  borderBottom: `1px solid ${colors.border}`
-              }}>
+              <thead style={{ background: colors.tableHeaderBg }}>
                 <tr>
-                  {['Name', 'Email', 'Phone', 'Reason'].map(header => (
-                    <th key={header} style={{
-                      padding: theme.spacing.md,
-                      textAlign: 'left',
-                      fontWeight: theme.typography.fontWeights.semibold,
-                      fontSize: theme.typography.fontSizes.xs,
-                      color: colors.textSecondary,
-                      textTransform: 'uppercase',
-                        letterSpacing: '0.5px'
-                    }}>
-                      {header}
-                    </th>
+                  {['Name', 'Email', 'Phone', 'Reason'].map((h, idx) => (
+                    <th key={idx} style={{ padding: `${theme.spacing.sm} ${theme.spacing.lg}`, textAlign: 'left', fontSize: '9px', fontWeight: 'bold', color: colors.textPrimary, textTransform: 'uppercase', letterSpacing: '1px', borderBottom: `2px solid ${colors.border}`, borderRight: idx < 3 ? `1px solid ${colors.border}` : 'none' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -1518,23 +1429,10 @@ function DashboardPage({ clients, users, employees, salaries, colors: colorsProp
               width: '100%',
                 borderCollapse: 'collapse'
             }}>
-              <thead style={{
-                  background: colors.successBg,
-                  borderBottom: `1px solid ${colors.border}`
-              }}>
+              <thead style={{ background: colors.tableHeaderBg }}>
                 <tr>
-                  {['Name', 'Email', 'Status', 'Joined'].map(header => (
-                    <th key={header} style={{
-                      padding: theme.spacing.md,
-                      textAlign: 'left',
-                      fontWeight: theme.typography.fontWeights.semibold,
-                      fontSize: theme.typography.fontSizes.xs,
-                      color: colors.textSecondary,
-                      textTransform: 'uppercase',
-                        letterSpacing: '0.5px'
-                    }}>
-                      {header}
-                    </th>
+                  {['Name', 'Email', 'Status', 'Joined'].map((h, idx) => (
+                    <th key={idx} style={{ padding: `${theme.spacing.sm} ${theme.spacing.lg}`, textAlign: 'left', fontSize: '9px', fontWeight: 'bold', color: colors.textPrimary, textTransform: 'uppercase', letterSpacing: '1px', borderBottom: `2px solid ${colors.border}`, borderRight: idx < 3 ? `1px solid ${colors.border}` : 'none' }}>{h}</th>
                   ))}
                 </tr>
               </thead>

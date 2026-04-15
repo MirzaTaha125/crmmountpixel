@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import getApiBaseUrl from '../apiBase';
-import { FaEdit, FaTrash, FaEllipsisV } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaEllipsisV, FaPlus } from 'react-icons/fa';
 import { theme } from '../theme';
 
 function EmployeesPage({ colors }) {
@@ -9,8 +9,8 @@ function EmployeesPage({ colors }) {
   const [employeeModalOpen, setEmployeeModalOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [employeeForm, setEmployeeForm] = useState({ Name: '', Email: '', Pass: '', address: '', cnic: '', joiningDate: '', salary: '', accountNumber: '', bankName: '', designation: '' });
-  const [employeeError, setEmployeeError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [_employeeError, setEmployeeError] = useState('');
+  const [_loading, setLoading] = useState(false);
   const [filterName, setFilterName] = useState('');
   const [filterDesignation, setFilterDesignation] = useState('');
   const [openMenuId, setOpenMenuId] = useState(null);
@@ -25,7 +25,7 @@ function EmployeesPage({ colors }) {
       if (filterDesignation) url += `designation=${encodeURIComponent(filterDesignation)}&`;
       const res = await axios.get(url);
       setEmployees(res.data.employees);
-    } catch (err) {
+    } catch {
       setEmployeeError('Failed to fetch employees');
     }
   };
@@ -102,7 +102,7 @@ function EmployeesPage({ colors }) {
     try {
       await axios.delete(`${API_URL}/api/employees/${emp._id}`);
       fetchEmployees();
-    } catch (err) {
+    } catch {
       setEmployeeError('Error deleting employee');
     } finally {
       setLoading(false);
@@ -110,25 +110,92 @@ function EmployeesPage({ colors }) {
   };
 
   return (
-    <div className="main-container" style={{ border: `1px solid ${colors.border}`, borderRadius: 18, background: colors.cardBg, boxShadow: colors.cardShadow, padding: 36, width: '95%', height: '100%', maxWidth: 'none', margin: 0, minHeight: 'calc(100vh - 100px)' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
-        <h2 style={{ fontSize: 32, fontWeight: 900, color: colors.text, letterSpacing: 1 }}>Employees</h2>
-        <div style={{ display: 'flex', gap: 16 }}>
-          <button onClick={() => openEmployeeModal(null)} style={{ padding: '12px 28px', background: colors.accent, color: '#fff', border: 'none', borderRadius: 10, fontWeight: 800, fontSize: 18, boxShadow: colors.cardShadow, cursor: 'pointer', transition: 'background 0.2s' }}>+ Add Employee</button>
+    <div style={{ width: '100%', fontFamily: 'inherit' }}>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: theme.spacing.lg,
+        background: colors.white,
+        padding: theme.spacing.md,
+        borderRadius: theme.radius.lg,
+        border: `1px solid ${colors.borderLight}`,
+        boxShadow: theme.shadows.sm,
+      }}>
+        <div>
+          <h2 style={{
+            fontSize: theme.typography.fontSizes.lg,
+            fontWeight: 'bold',
+            color: colors.textPrimary,
+            margin: 0,
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px'
+          }}>
+            Human Resources Management
+          </h2>
+          <p style={{
+            fontSize: '10px',
+            color: colors.textTertiary,
+            margin: 0,
+            fontWeight: 'bold',
+            textTransform: 'uppercase'
+          }}>
+            Internal Staff Records & Payroll Identification Matrix
+          </p>
         </div>
+        <button
+          onClick={() => openEmployeeModal(null)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: theme.spacing.sm,
+            padding: `8px 20px`,
+            background: colors.sidebarBg,
+            color: colors.white,
+            border: 'none',
+            borderRadius: theme.radius.md,
+            fontWeight: 'bold',
+            fontSize: '9px',
+            textTransform: 'uppercase',
+            cursor: 'pointer',
+            boxShadow: theme.shadows.sm,
+          }}
+        >
+          <FaPlus />
+          Provision Staff
+        </button>
       </div>
-      <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
+      <div style={{ display: 'flex', gap: theme.spacing.md, marginBottom: theme.spacing.xl }}>
         <input
           type="text"
           placeholder="Search by name..."
           value={filterName}
           onChange={e => setFilterName(e.target.value)}
-          style={{ padding: 10, borderRadius: 7, border: `1px solid ${colors.border}`, fontSize: 16, background: colors.accentLight, minWidth: 180 }}
+          style={{
+            padding: theme.spacing.sm,
+            borderRadius: theme.radius.md,
+            border: `1px solid ${colors.border}`,
+            fontSize: theme.typography.fontSizes.xs,
+            background: colors.white,
+            color: colors.textPrimary,
+            minWidth: 200,
+            outline: 'none'
+          }}
         />
         <select
           value={filterDesignation}
           onChange={e => setFilterDesignation(e.target.value)}
-          style={{ padding: 10, borderRadius: 7, border: `1px solid ${colors.border}`, fontSize: 16, background: colors.accentLight, minWidth: 180 }}
+          style={{
+            padding: theme.spacing.sm,
+            borderRadius: theme.radius.md,
+            border: `1px solid ${colors.border}`,
+            fontSize: theme.typography.fontSizes.xs,
+            background: colors.white,
+            color: colors.textPrimary,
+            minWidth: 200,
+            outline: 'none',
+            cursor: 'pointer'
+          }}
         >
           <option value="">All Designations</option>
           {[...new Set(employees.map(emp => emp.designation).filter(Boolean))].map(des => (
@@ -136,32 +203,53 @@ function EmployeesPage({ colors }) {
           ))}
         </select>
       </div>
-      <div className="responsive-table" style={{ borderRadius: 12, background: colors.accentLight, boxShadow: colors.cardShadow }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', background: colors.cardBg }}>
-          <thead style={{ background: colors.accentLight }}>
-            <tr>
-              <th style={{ padding: 16, color: colors.text, fontWeight: 800, fontSize: 17 }}>Name</th>
-              <th style={{ padding: 16, color: colors.text, fontWeight: 800, fontSize: 17 }}>Email</th>
-              <th style={{ padding: 16, color: colors.text, fontWeight: 800, fontSize: 17 }}>CNIC</th>
-              <th style={{ padding: 16, color: colors.text, fontWeight: 800, fontSize: 17 }}>Joining Date</th>
-              <th style={{ padding: 16, color: colors.text, fontWeight: 800, fontSize: 17 }}>Salary</th>
-              <th style={{ padding: 16, color: colors.text, fontWeight: 800, fontSize: 17 }}>Account Number</th>
-              <th style={{ padding: 16, color: colors.text, fontWeight: 800, fontSize: 17 }}>Bank Name</th>
-              <th style={{ padding: 16, color: colors.text, fontWeight: 800, fontSize: 17 }}>Designation</th>
-              <th style={{ padding: 16, color: colors.text, fontWeight: 800, fontSize: 17 }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
+      <div style={{
+        background: colors.white,
+        borderRadius: theme.radius.lg,
+        border: `1px solid ${colors.borderLight}`,
+        overflow: 'hidden',
+        boxShadow: theme.shadows.md,
+      }}>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead style={{ background: colors.tableHeaderBg }}>
+                <tr>
+                  {['Name', 'Email', 'Identification', 'Joining', 'Salary', 'Account', 'Bank', 'Designation', 'Actions'].map((header, idx) => (
+                    <th key={header} style={{
+                      padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
+                      textAlign: 'left',
+                      fontWeight: 'bold',
+                      fontSize: '9px',
+                      color: colors.textPrimary,
+                      textTransform: 'uppercase',
+                      letterSpacing: '1px',
+                      borderBottom: `2px solid ${colors.border}`,
+                      borderRight: idx < 8 ? `1px solid ${colors.border}` : 'none'
+                    }}>{header}</th>
+                  ))}
+                </tr>
+              </thead>
+            <tbody>
             {employees.map(emp => (
-              <tr key={emp._id} style={{ borderBottom: `1px solid ${colors.border}` }}>
-                <td style={{ padding: 16 }}>{emp.Name}</td>
-                <td style={{ padding: 16 }}>{emp.Email}</td>
-                <td style={{ padding: 16 }}>{emp.cnic}</td>
-                <td style={{ padding: 16 }}>{emp.joiningDate?.slice(0,10)}</td>
-                <td style={{ padding: 16 }}>{emp.salary}</td>
-                <td style={{ padding: 16 }}>{emp.accountNumber}</td>
-                <td style={{ padding: 16 }}>{emp.bankName}</td>
-                <td style={{ padding: 16 }}>{emp.designation}</td>
+              <tr key={emp._id} style={{ borderBottom: `1px solid ${colors.borderLight}` }}>
+                <td style={{ padding: theme.spacing.md, fontSize: theme.typography.fontSizes.sm, fontWeight: 'bold', color: colors.textPrimary }}>{emp.Name}</td>
+                <td style={{ padding: theme.spacing.md, fontSize: theme.typography.fontSizes.xs, color: colors.textSecondary }}>{emp.Email}</td>
+                <td style={{ padding: theme.spacing.md, fontSize: theme.typography.fontSizes.xs, color: colors.textTertiary, fontFamily: 'monospace' }}>{emp.cnic}</td>
+                <td style={{ padding: theme.spacing.md, fontSize: theme.typography.fontSizes.xs, color: colors.textSecondary }}>{emp.joiningDate?.slice(0, 10)}</td>
+                <td style={{ padding: theme.spacing.md, fontSize: theme.typography.fontSizes.xs, fontWeight: 'bold', color: colors.success }}>{emp.salary}</td>
+                <td style={{ padding: theme.spacing.md, fontSize: theme.typography.fontSizes.xs, color: colors.textSecondary, fontFamily: 'monospace' }}>{emp.accountNumber}</td>
+                <td style={{ padding: theme.spacing.md, fontSize: theme.typography.fontSizes.xs, color: colors.textSecondary }}>{emp.bankName}</td>
+                <td style={{ padding: theme.spacing.md }}>
+                  <span style={{
+                    padding: '2px 8px',
+                    background: colors.primaryBg,
+                    color: colors.primary,
+                    borderRadius: theme.radius.full,
+                    fontSize: theme.typography.fontSizes['2xs'],
+                    fontWeight: 'bold',
+                    textTransform: 'uppercase'
+                  }}>{emp.designation}</span>
+                </td>
                 <td style={{ padding: 16, position: 'relative' }} onClick={(e) => e.stopPropagation()}>
                   <div style={{ position: 'relative', display: 'inline-block' }} data-menu-container>
                     <button
@@ -174,9 +262,9 @@ function EmployeesPage({ colors }) {
                         border: 'none',
                         cursor: 'pointer',
                         padding: '4px 8px',
-                        borderRadius: theme.radius.sm,
-                        fontSize: '18px',
-                        color: colors.text || colors.textPrimary || '#333',
+                        borderRadius: 0,
+                        fontSize: '16px',
+                        color: colors.textPrimary,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -196,12 +284,12 @@ function EmployeesPage({ colors }) {
                           position: 'absolute',
                           top: '100%',
                           right: 0,
-                          background: colors.white || colors.cardBg || '#fff',
-                          border: `1px solid ${colors.border || '#ddd'}`,
-                          borderRadius: theme.radius.md || '8px',
-                          boxShadow: theme.shadows.md || '0 4px 12px rgba(0,0,0,0.15)',
+                          background: colors.white,
+                          border: `2px solid ${colors.sidebarBg}`,
+                          borderRadius: 0,
+                          boxShadow: theme.shadows.md,
                           zIndex: 1000,
-                          minWidth: '150px',
+                          minWidth: '160px',
                           marginTop: '4px',
                         }}
                         onClick={(e) => e.stopPropagation()}
@@ -213,23 +301,23 @@ function EmployeesPage({ colors }) {
                             setOpenMenuId(null);
                           }}
                           style={{
-                            padding: `${theme.spacing.sm || '8px'} ${theme.spacing.md || '16px'}`,
+                            padding: `${theme.spacing.sm} ${theme.spacing.md}`,
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: theme.spacing.sm || '8px',
-                            color: colors.textPrimary || colors.text || '#333',
-                            borderBottom: `1px solid ${colors.borderLight || colors.border || '#eee'}`,
+                            gap: theme.spacing.sm,
+                            color: colors.textPrimary,
+                            borderBottom: `1px solid ${colors.borderLight}`,
                           }}
                           onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = colors.primaryBg || colors.accentLight || 'rgba(0,0,0,0.05)';
+                            e.currentTarget.style.backgroundColor = colors.primaryBg;
                           }}
                           onMouseLeave={(e) => {
                             e.currentTarget.style.backgroundColor = 'transparent';
                           }}
                         >
                           <FaEdit style={{ fontSize: '14px' }} />
-                          <span>Edit</span>
+                          <span style={{ fontSize: theme.typography.fontSizes.xs, fontWeight: 'bold' }}>Edit Record</span>
                         </div>
                         <div
                           onClick={(e) => {
@@ -238,22 +326,22 @@ function EmployeesPage({ colors }) {
                             setOpenMenuId(null);
                           }}
                           style={{
-                            padding: `${theme.spacing.sm || '8px'} ${theme.spacing.md || '16px'}`,
+                            padding: `${theme.spacing.sm} ${theme.spacing.md}`,
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: theme.spacing.sm || '8px',
-                            color: colors.error || colors.dangerDark || '#dc2626',
+                            gap: theme.spacing.sm,
+                            color: colors.error,
                           }}
                           onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = colors.errorLight || 'rgba(220, 38, 38, 0.1)';
+                            e.currentTarget.style.backgroundColor = colors.errorBg;
                           }}
                           onMouseLeave={(e) => {
                             e.currentTarget.style.backgroundColor = 'transparent';
                           }}
                         >
                           <FaTrash style={{ fontSize: '14px' }} />
-                          <span>Delete</span>
+                          <span style={{ fontSize: theme.typography.fontSizes.xs, fontWeight: 'bold' }}>Delete Record</span>
                         </div>
                       </div>
                     )}
@@ -263,25 +351,55 @@ function EmployeesPage({ colors }) {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
       {/* Employee Modal */}
       {employeeModalOpen && (
-        <div className="modal" style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="modal-content" style={{ background: colors.cardBg, borderRadius: 18, padding: 38, minWidth: 400, boxShadow: colors.cardShadow, width: 420 }}>
-            <h2 style={{ marginBottom: 24, fontWeight: 900, color: colors.text }}>{selectedEmployee ? 'Edit Employee' : 'Add Employee'}</h2>
-            <form onSubmit={handleEmployeeSave} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-              <input name="Name" value={employeeForm.Name} onChange={handleEmployeeFormChange} placeholder="Name" style={{ padding: 12, borderRadius: 8, border: `1px solid ${colors.border}`, fontSize: 16, background: colors.accentLight }} required />
-              <input name="Email" value={employeeForm.Email} onChange={handleEmployeeFormChange} placeholder="Email" style={{ padding: 12, borderRadius: 8, border: `1px solid ${colors.border}`, fontSize: 16, background: colors.accentLight }} required />
-              <input name="address" value={employeeForm.address} onChange={handleEmployeeFormChange} placeholder="Address" style={{ padding: 12, borderRadius: 8, border: `1px solid ${colors.border}`, fontSize: 16, background: colors.accentLight }} required />
-              <input name="cnic" value={employeeForm.cnic} onChange={handleEmployeeFormChange} placeholder="CNIC" style={{ padding: 12, borderRadius: 8, border: `1px solid ${colors.border}`, fontSize: 16, background: colors.accentLight }} required />
-              <input name="joiningDate" type="date" value={employeeForm.joiningDate} onChange={handleEmployeeFormChange} style={{ padding: 12, borderRadius: 8, border: `1px solid ${colors.border}`, fontSize: 16, background: colors.accentLight }} required />
-              <input name="salary" type="number" value={employeeForm.salary} onChange={handleEmployeeFormChange} placeholder="Salary" style={{ padding: 12, borderRadius: 8, border: `1px solid ${colors.border}`, fontSize: 16, background: colors.accentLight }} required />
-              <input name="accountNumber" value={employeeForm.accountNumber} onChange={handleEmployeeFormChange} placeholder="Account Number" style={{ padding: 12, borderRadius: 8, border: `1px solid ${colors.border}`, fontSize: 16, background: colors.accentLight }} required />
-              <input name="bankName" value={employeeForm.bankName} onChange={handleEmployeeFormChange} placeholder="Bank Name" style={{ padding: 12, borderRadius: 8, border: `1px solid ${colors.border}`, fontSize: 16, background: colors.accentLight }} required />
-              <input name="designation" value={employeeForm.designation} onChange={handleEmployeeFormChange} placeholder="Designation" style={{ padding: 12, borderRadius: 8, border: `1px solid ${colors.border}`, fontSize: 16, background: colors.accentLight }} required />
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 10 }}>
-                <button type="button" onClick={closeEmployeeModal} style={{ padding: '10px 22px', background: colors.accentLight, color: colors.text, border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 16 }}>Cancel</button>
-                <button type="submit" style={{ padding: '10px 22px', background: colors.accent, color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 16 }}>{selectedEmployee ? 'Save' : 'Add'}</button>
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ background: colors.white, borderRadius: theme.radius.xl, width: 550, boxShadow: theme.shadows.xl, border: `1px solid ${colors.border}`, overflow: 'hidden' }}>
+            <div style={{ background: colors.tableHeaderBg, padding: `15px 20px`, color: colors.textPrimary, fontWeight: theme.typography.fontWeights.bold, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', borderBottom: `2px solid ${colors.border}`, borderRadius: `${theme.radius.xl} ${theme.radius.xl} 0 0` }}>
+              {selectedEmployee ? 'Security Profile: Update Staff Member' : 'Security Profile: Register New Staff'}
+            </div>
+            <form onSubmit={handleEmployeeSave} style={{ padding: theme.spacing.xl, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: theme.spacing.md }}>
+              <div style={{ gridColumn: 'span 2' }}>
+                <label style={{ display: 'block', fontSize: '10px', fontWeight: 'bold', color: colors.textSecondary, marginBottom: '4px', textTransform: 'uppercase' }}>Full Name</label>
+                <input name="Name" value={employeeForm.Name} onChange={handleEmployeeFormChange} placeholder="Name" style={{ width: '100%', padding: theme.spacing.sm, borderRadius: 0, border: `1px solid ${colors.border}`, fontSize: theme.typography.fontSizes.xs, background: colors.white, outline: 'none' }} required />
+              </div>
+              <div style={{ gridColumn: 'span 2' }}>
+                <label style={{ display: 'block', fontSize: '10px', fontWeight: 'bold', color: colors.textSecondary, marginBottom: '4px', textTransform: 'uppercase' }}>Email Address</label>
+                <input name="Email" value={employeeForm.Email} onChange={handleEmployeeFormChange} placeholder="Email" style={{ width: '100%', padding: theme.spacing.sm, borderRadius: 0, border: `1px solid ${colors.border}`, fontSize: theme.typography.fontSizes.xs, background: colors.white, outline: 'none' }} required />
+              </div>
+              <div style={{ gridColumn: 'span 2' }}>
+                <label style={{ display: 'block', fontSize: '10px', fontWeight: 'bold', color: colors.textSecondary, marginBottom: '4px', textTransform: 'uppercase' }}>Residency Address</label>
+                <input name="address" value={employeeForm.address} onChange={handleEmployeeFormChange} placeholder="Address" style={{ width: '100%', padding: theme.spacing.sm, borderRadius: 0, border: `1px solid ${colors.border}`, fontSize: theme.typography.fontSizes.xs, background: colors.white, outline: 'none' }} required />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '10px', fontWeight: 'bold', color: colors.textSecondary, marginBottom: '4px', textTransform: 'uppercase' }}>CNIC Number</label>
+                <input name="cnic" value={employeeForm.cnic} onChange={handleEmployeeFormChange} placeholder="CNIC" style={{ width: '100%', padding: theme.spacing.sm, borderRadius: 0, border: `1px solid ${colors.border}`, fontSize: theme.typography.fontSizes.xs, background: colors.white, outline: 'none' }} required />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '10px', fontWeight: 'bold', color: colors.textSecondary, marginBottom: '4px', textTransform: 'uppercase' }}>Joining Date</label>
+                <input name="joiningDate" type="date" value={employeeForm.joiningDate} onChange={handleEmployeeFormChange} style={{ width: '100%', padding: theme.spacing.sm, borderRadius: 0, border: `1px solid ${colors.border}`, fontSize: theme.typography.fontSizes.xs, background: colors.white, outline: 'none' }} required />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '10px', fontWeight: 'bold', color: colors.textSecondary, marginBottom: '4px', textTransform: 'uppercase' }}>Basic Salary</label>
+                <input name="salary" type="number" value={employeeForm.salary} onChange={handleEmployeeFormChange} placeholder="Salary" style={{ width: '100%', padding: theme.spacing.sm, borderRadius: 0, border: `1px solid ${colors.border}`, fontSize: theme.typography.fontSizes.xs, background: colors.white, outline: 'none' }} required />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '10px', fontWeight: 'bold', color: colors.textSecondary, marginBottom: '4px', textTransform: 'uppercase' }}>Designation</label>
+                <input name="designation" value={employeeForm.designation} onChange={handleEmployeeFormChange} placeholder="Designation" style={{ width: '100%', padding: theme.spacing.sm, borderRadius: 0, border: `1px solid ${colors.border}`, fontSize: theme.typography.fontSizes.xs, background: colors.white, outline: 'none' }} required />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '10px', fontWeight: 'bold', color: colors.textSecondary, marginBottom: '4px', textTransform: 'uppercase' }}>Bank Account</label>
+                <input name="accountNumber" value={employeeForm.accountNumber} onChange={handleEmployeeFormChange} placeholder="Account Number" style={{ width: '100%', padding: theme.spacing.sm, borderRadius: 0, border: `1px solid ${colors.border}`, fontSize: theme.typography.fontSizes.xs, background: colors.white, outline: 'none' }} required />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '10px', fontWeight: 'bold', color: colors.textSecondary, marginBottom: '4px', textTransform: 'uppercase' }}>Bank Name</label>
+                <input name="bankName" value={employeeForm.bankName} onChange={handleEmployeeFormChange} placeholder="Bank Name" style={{ width: '100%', padding: theme.spacing.sm, borderRadius: 0, border: `1px solid ${colors.border}`, fontSize: theme.typography.fontSizes.xs, background: colors.white, outline: 'none' }} required />
+              </div>
+              <div style={{ gridColumn: 'span 2', display: 'flex', justifyContent: 'flex-end', gap: theme.spacing.md, marginTop: theme.spacing.md }}>
+                <button type="button" onClick={closeEmployeeModal} style={{ padding: `${theme.spacing.sm} ${theme.spacing.xl}`, background: colors.white, color: colors.textSecondary, border: `1px solid ${colors.border}`, borderRadius: theme.radius.md, fontWeight: 'bold', fontSize: theme.typography.fontSizes['2xs'], textTransform: 'uppercase', cursor: 'pointer' }}>Cancel</button>
+                <button type="submit" style={{ padding: `${theme.spacing.sm} ${theme.spacing.xl}`, background: colors.sidebarBg, color: '#fff', border: 'none', borderRadius: theme.radius.md, fontWeight: 'bold', fontSize: theme.typography.fontSizes['2xs'], textTransform: 'uppercase', cursor: 'pointer' }}>{selectedEmployee ? 'Update' : 'Confirm'}</button>
               </div>
             </form>
           </div>

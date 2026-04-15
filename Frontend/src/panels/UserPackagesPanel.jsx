@@ -117,7 +117,7 @@ export default function UserPackagesPanel({ colors }) {
     try {
       const res = await axios.get(`${API_URL}/api/packages`);
       setPackages(res.data);
-    } catch (err) {
+    } catch {
       setError('Failed to fetch packages');
     } finally {
       setLoading(false);

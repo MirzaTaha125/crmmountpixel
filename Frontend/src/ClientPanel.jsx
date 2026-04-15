@@ -81,6 +81,11 @@ function ClientPanel() {
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024);
   const [logoError, setLogoError] = useState(false);
   const [totalUnreadCount, setTotalUnreadCount] = useState(0);
+  const [notesLoading, setNotesLoading] = useState(false);
+  const [clientNotes, setClientNotes] = useState([]);
+  const [newNote, setNewNote] = useState({ message: '', parentNoteId: null });
+  const [sendingNote, setSendingNote] = useState(false);
+  const [replyingTo, setReplyingTo] = useState(null);
 
   // Fetch unread message count
   const fetchUnreadCount = async () => {
@@ -92,8 +97,8 @@ function ClientPanel() {
       const chats = res.data.chats || [];
       const total = chats.reduce((sum, chat) => sum + (chat.unreadCount || 0), 0);
       setTotalUnreadCount(total);
-    } catch (error) {
-      // Error fetching unread count
+    } catch {
+      // ignore
     }
   };
 
@@ -283,6 +288,7 @@ function ClientPanel() {
     }
   };
 
+  // eslint-disable-next-line no-unused-vars
   const markMessagesAsRead = async () => {
     try {
       const token = localStorage.getItem('token') || user?.token;
@@ -443,6 +449,8 @@ function ClientPanel() {
     { id: 'services', label: 'Services', icon: FaServer },
     { id: 'assets', label: 'Assets', icon: FaBoxOpen }
   ];
+
+  const messagesTabEnabled = false; // Messages tab is disabled
 
   return (
     <>
@@ -1418,25 +1426,49 @@ function ClientPanel() {
                   </div>
                 </div>
 
-                {invoice.linkId && invoice.status === 'Pending' && (
+                {invoice.status === 'Pending' && (invoice.paypalInvoiceUrl || invoice.linkId) && (
                   <div style={{
                     marginTop: theme.spacing.lg,
                     paddingTop: theme.spacing.lg,
                     borderTop: `1px solid ${colors.border}`
                   }}>
-                    <Button
-                      variant="primary"
-                      onClick={() => navigate(`/pay/${invoice.linkId}`)}
-                      style={{
-                        width: '100%',
-                        justifyContent: 'center',
-                        padding: `${theme.spacing.md} ${theme.spacing.lg}`,
-                              fontSize: theme.typography.fontSizes.base,
-                        fontWeight: theme.typography.fontWeights.semibold
-                      }}
-                    >
-                      Pay Now
-                    </Button>
+                    {invoice.paypalInvoiceUrl ? (
+                      <a
+                        href={invoice.paypalInvoiceUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: '100%',
+                          padding: `${theme.spacing.md} ${theme.spacing.lg}`,
+                          background: '#0070ba',
+                          color: '#fff',
+                          borderRadius: theme.radius.lg,
+                          fontWeight: theme.typography.fontWeights.semibold,
+                          fontSize: theme.typography.fontSizes.base,
+                          textDecoration: 'none',
+                          boxSizing: 'border-box',
+                        }}
+                      >
+                        Pay via PayPal Invoice
+                      </a>
+                    ) : (
+                      <Button
+                        variant="primary"
+                        onClick={() => navigate(`/pay/${invoice.linkId}`)}
+                        style={{
+                          width: '100%',
+                          justifyContent: 'center',
+                          padding: `${theme.spacing.md} ${theme.spacing.lg}`,
+                          fontSize: theme.typography.fontSizes.base,
+                          fontWeight: theme.typography.fontWeights.semibold
+                        }}
+                      >
+                        View Invoice
+                      </Button>
+                    )}
                   </div>
                 )}
 
@@ -1919,7 +1951,7 @@ function ClientPanel() {
           )}
 
           {/* Messages Tab */}
-          {false && activeTab === 'messages' && (
+          {activeTab === 'messages' && messagesTabEnabled && (
             <div className="fade-in">
               <div style={{ marginBottom: theme.spacing.xl }}>
                 <h2 className="responsive-text-2xl" style={{

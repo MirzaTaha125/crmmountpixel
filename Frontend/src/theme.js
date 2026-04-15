@@ -49,12 +49,17 @@ export const theme = {
     focus: '#6366f1',
     disabled: '#cbd5e1',
 
-    // Sidebar
-    sidebarBg: '#1e293b',
-    sidebarHover: '#334155',
+    // Sidebar - Sharp & Professional
+    sidebarBg: '#111827', // Deep Grey-Blue
+    sidebarHover: '#1f2937',
     sidebarActive: '#6366f1',
-    sidebarText: '#e2e8f0',
+    sidebarText: '#9ca3af',
     sidebarTextActive: '#ffffff',
+
+    // Table Refinements
+    tableHeaderBg: '#f1f5f9', // Sophisticated Light Grey Header
+    tableRowHover: '#f8fafc',
+    premiumGlow: '0 8px 15px rgba(15, 23, 42, 0.05)',
   },
 
   // Typography
@@ -98,20 +103,22 @@ export const theme = {
   // Border Radius
   radius: {
     none: '0',
-    sm: '0.375rem',   // 6px
-    md: '0.5rem',     // 8px
-    lg: '0.75rem',    // 12px
-    xl: '1rem',       // 16px
-    '2xl': '1.5rem',  // 24px
+    xs: '4px',
+    sm: '8px', 
+    md: '12px',     // Standard for buttons/inputs
+    lg: '16px',     // Standard for cards/tables
+    xl: '24px',     // Standard for modals
+    '2xl': '32px',
     full: '9999px',
   },
 
-  // Shadows
+  // Shadows (Soft & Premium)
   shadows: {
-    sm: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-    md: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-    lg: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-    xl: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+    xs: '0 1px 2px 0 rgba(0, 0, 0, 0.03)',
+    sm: '0 2px 4px 0 rgba(15, 23, 42, 0.05)',
+    md: '0 8px 30px rgba(15, 23, 42, 0.08), 0 0 1px rgba(15, 23, 42, 0.12)',
+    lg: '0 12px 40px rgba(15, 23, 42, 0.1), 0 0 1px rgba(15, 23, 42, 0.15)',
+    xl: '0 24px 60px rgba(15, 23, 42, 0.14), 0 0 1px rgba(15, 23, 42, 0.18)',
     inner: 'inset 0 2px 4px 0 rgba(0, 0, 0, 0.06)',
     none: 'none',
   },
@@ -133,6 +140,25 @@ export const theme = {
     popover: 1060,
     tooltip: 1070,
   },
+  
+  // Breakpoints
+  breakpoints: {
+    xs: '375px',
+    sm: '480px',
+    md: '768px',
+    lg: '900px',
+    xl: '1200px',
+  },
+
+  // Media Queries Helpers
+  media: {
+    mobile: '@media (max-width: 480px)',
+    tablet: '@media (max-width: 900px)',
+    desktop: '@media (min-width: 901px)',
+    sm: (style) => `@media (max-width: 480px) { ${style} }`,
+    md: (style) => `@media (max-width: 768px) { ${style} }`,
+    lg: (style) => `@media (max-width: 900px) { ${style} }`,
+  },
 };
 
 // Helper function to get theme colors (for backward compatibility)
@@ -147,7 +173,7 @@ export const getColors = () => ({
   border: theme.colors.border,
   text: theme.colors.textPrimary,
   muted: theme.colors.textSecondary,
-  sidebarGradient: `linear-gradient(135deg, ${theme.colors.sidebarBg} 0%, #0f172a 100%)`,
+  sidebarGradient: theme.colors.sidebarBg, // Solid background, no gradient for professional look
   danger: theme.colors.errorLight,
   dangerDark: theme.colors.error,
 });
@@ -161,6 +187,7 @@ export const componentStyles = {
     padding: theme.spacing.xl,
     boxShadow: theme.shadows.md,
     border: `1px solid ${theme.colors.borderLight}`,
+    overflow: 'hidden',
   },
 
   // Button Primary
@@ -246,25 +273,34 @@ export const componentStyles = {
   },
 
   // Table
-  table: {
+  tableContainer: {
     width: '100%',
-    borderCollapse: 'collapse',
     background: theme.colors.white,
     borderRadius: theme.radius.lg,
-    overflow: 'hidden',
-    boxShadow: theme.shadows.sm,
+    boxShadow: theme.shadows.md,
+    border: `1px solid ${theme.colors.borderLight}`,
+    overflowX: 'auto', // Crucial for responsive tables
+    position: 'relative',
+    WebkitOverflowScrolling: 'touch', // Smooth scroll on iOS
+  },
+
+  table: {
+    width: '100%',
+    borderCollapse: 'separate',
+    borderSpacing: 0,
+    background: theme.colors.white,
   },
 
   tableHeader: {
-    background: theme.colors.primaryBg,
-    padding: theme.spacing.md,
+    background: theme.colors.tableHeaderBg,
+    padding: `${theme.spacing.md} ${theme.spacing.lg}`,
     textAlign: 'left',
-    fontWeight: theme.typography.fontWeights.semibold,
-    fontSize: theme.typography.fontSizes.sm,
-    color: theme.colors.textSecondary,
+    fontWeight: theme.typography.fontWeights.bold,
+    fontSize: '9px',
+    color: theme.colors.textPrimary,
     textTransform: 'uppercase',
-    letterSpacing: '0.05em',
-    borderBottom: `1px solid ${theme.colors.border}`,
+    letterSpacing: '1px',
+    borderBottom: `2px solid ${theme.colors.border}`,
   },
 
   tableCell: {
@@ -294,7 +330,7 @@ export const componentStyles = {
     background: theme.colors.white,
     borderRadius: theme.radius['2xl'],
     boxShadow: theme.shadows.xl,
-    width: '100%',
+    width: '95%', // Make it take almost full width on small screens
     maxWidth: '600px',
     maxHeight: '90vh',
     display: 'flex',

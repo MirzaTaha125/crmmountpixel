@@ -294,20 +294,18 @@ export const getFinancialSummary = async (req, res) => {
       payments = await PaymentHistory.find(paymentMatch);
     }
     
-    const totalPayments = payments.reduce((sum, pay) => {
-      const amount = pay.amount || 0;
-      const taxFee = pay.taxFee || 0;
-      // Calculate amount after taxes (amount - taxFee)
-      const amountAfterTax = amount - taxFee;
-      return sum + amountAfterTax;
-    }, 0);
+    const grossPayments = payments.reduce((sum, pay) => sum + (pay.amount || 0), 0);
+    const totalFees     = payments.reduce((sum, pay) => sum + (pay.taxFee || 0), 0);
+    const totalPayments = grossPayments - totalFees;
 
     // Calculate profit/loss
     const profit = totalPayments - totalExpenses;
-    const breakEvenAmount = totalExpenses - totalPayments; // How much more needed
+    const breakEvenAmount = totalExpenses - totalPayments;
 
     res.status(200).json({
       totalExpenses,
+      grossPayments,
+      totalFees,
       totalPayments,
       profit,
       breakEvenAmount: breakEvenAmount > 0 ? breakEvenAmount : 0,

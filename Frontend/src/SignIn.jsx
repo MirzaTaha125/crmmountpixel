@@ -21,7 +21,7 @@ function SignIn() {
   const [showLoadingScreen, setShowLoadingScreen] = useState(false);
   const [requires2FA, setRequires2FA] = useState(false);
   const [userId, setUserId] = useState(null);
-  const [tempToken, setTempToken] = useState(null);
+  const [_tempToken, setTempToken] = useState(null);
   const [useBackupCode, setUseBackupCode] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotPasswordStep, setForgotPasswordStep] = useState(1); // 1: Email, 2: OTP, 3: New Password, 4: Success
@@ -255,9 +255,25 @@ function SignIn() {
       minHeight: '100vh', 
       width: '100vw', 
       display: 'flex',
+      flexDirection: 'row',
       fontFamily: theme.typography.fontFamily,
       overflow: 'hidden'
-    }}>
+    }} className="signin-container">
+      <style>{`
+        @media (max-width: 900px) {
+          .signin-container {
+            flex-direction: column !important;
+            overflow-y: auto !important;
+          }
+          .signin-left-col {
+            padding: ${theme.spacing.xl} !important;
+            min-height: auto !important;
+          }
+          .signin-right-col {
+            display: none !important;
+          }
+        }
+      `}</style>
       {/* Left Column - Sign In Form */}
       <div style={{
         flex: '1',
@@ -268,7 +284,7 @@ function SignIn() {
         background: theme.colors.white,
         minHeight: '100vh',
         overflowY: 'auto'
-      }}>
+      }} className="signin-left-col">
         <div style={{ 
           width: '100%',
           maxWidth: (requires2FA && useBackupCode) || showForgotPassword ? '600px' : '480px'
@@ -466,9 +482,8 @@ function SignIn() {
                   setTwoFactorCode(value);
                   setError(''); // Clear error when user types
                 }}
-                onComplete={(value) => {
+                onComplete={() => {
                   // Auto-submit when complete (optional)
-                  // You can remove this if you want manual submit only
                 }}
                 isBackupCode={useBackupCode}
                 label={useBackupCode ? "Backup Code (8 or 12 characters)" : "2FA Code"}
@@ -915,37 +930,32 @@ function SignIn() {
         </div>
       </div>
 
-      {/* Right Column - Image with Gradient Background */}
-      <div 
-        className="signin-right-column"
-        style={{
-          flex: '1',
-          position: 'relative',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: '100vh',
-          overflow: 'hidden'
-        }}
-      >
+      {/* Right Column - Decorative Branding with Image & Gradient */}
+      <div style={{
+        flex: '1.2',
+        position: 'relative',
+        background: theme.colors.sidebarBg,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden',
+        minHeight: '100vh'
+      }} className="signin-right-col">
         <style>{`
           @keyframes gradientMove {
-            0% {
-              background-position: 0% 50%;
-            }
-            50% {
-              background-position: 100% 50%;
-            }
-            100% {
-              background-position: 0% 50%;
-            }
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
           }
-          @media (max-width: 768px) {
-            .signin-right-column {
+          @media (max-width: 900px) {
+            .signin-right-col {
               display: none !important;
             }
           }
         `}</style>
+
+        {/* Dynamic Gradient Background */}
         <div style={{
           position: 'absolute',
           top: 0,
@@ -977,7 +987,7 @@ function SignIn() {
               height: '100%',
               objectFit: 'contain',
               borderRadius: theme.radius.xl
-            }}
+            }} 
           />
         </div>
 

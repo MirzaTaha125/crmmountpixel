@@ -53,7 +53,7 @@ class NotificationService {
       document.removeEventListener('click', this.globalClickHandler);
     }
     
-    this.globalClickHandler = (e) => {
+    this.globalClickHandler = () => {
       // If there are active notifications and user clicks anywhere, stop the sound
       if (this.activeNotifications.size > 0) {
         console.log('Global click detected - stopping notification sound');

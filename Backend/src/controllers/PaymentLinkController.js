@@ -5,6 +5,7 @@ import Assignment from '../model/Assignment.js';
 import User from '../model/User.js';
 import { sendPaymentConfirmationEmail, sendEmail } from '../services/emailService.js';
 import { logPaymentLinkAction, logPaymentAction, logActivity } from '../services/activityLogService.js';
+import { createAndSendPaypalInvoice, getPaypalInvoiceStatus, cancelPaypalInvoice } from '../services/paypalService.js';
 
 /**
  * Sends payment notification email to all admin users
@@ -272,6 +273,20 @@ export const createPaymentLink = async (req, res) => {
         }
       } else {
         console.warn('No userId found in request, skipping PaymentHistory creation');
+      }
+    }
+
+    // Create PayPal invoice and send it to the client (non-blocking — don't fail if PayPal errors)
+    if (paymentLink.clientEmail) {
+      try {
+        const paypal = await createAndSendPaypalInvoice(paymentLink);
+        paymentLink.paypalInvoiceId  = paypal.invoiceId;
+        paymentLink.paypalInvoiceUrl = paypal.invoiceUrl;
+        paymentLink.paypalInvoiceStatus = paypal.status;
+        await paymentLink.save();
+        console.log(`PayPal invoice created & sent: ${paypal.invoiceId}`);
+      } catch (paypalError) {
+        console.error('PayPal invoice creation failed (non-fatal):', paypalError.message);
       }
     }
 
@@ -729,8 +744,126 @@ export const deletePaymentLink = async (req, res) => {
     if (result.invoiceNumber) {
       await PaymentHistory.deleteOne({ invoiceNumber: result.invoiceNumber });
     }
+
+    // Cancel PayPal invoice if one exists
+    if (result.paypalInvoiceId && result.paypalInvoiceStatus !== 'PAID') {
+      await cancelPaypalInvoice(result.paypalInvoiceId, 'Invoice deleted from CRM');
+    }
+
     res.json({ message: 'Payment link deleted' });
   } catch (err) {
     res.status(500).json({ message: 'Error deleting payment link', error: err.message });
   }
-}; 
+};
+
+// Sync PayPal invoice status with our DB (called from admin panel or on page load)
+export const syncPaypalStatus = async (req, res) => {
+  try {
+    const paymentLink = await PaymentLink.findOne({ linkId: req.params.linkId });
+    if (!paymentLink) return res.status(404).json({ message: 'Payment link not found' });
+    if (!paymentLink.paypalInvoiceId) return res.status(400).json({ message: 'No PayPal invoice linked' });
+
+    const { status, invoiceUrl, paidAt } = await getPaypalInvoiceStatus(paymentLink.paypalInvoiceId);
+
+    paymentLink.paypalInvoiceStatus = status;
+    if (invoiceUrl) paymentLink.paypalInvoiceUrl = invoiceUrl;
+
+    // If PayPal says PAID but our record isn't — sync it
+    if (status === 'PAID' && paymentLink.status !== 'Paid') {
+      paymentLink.status = 'Paid';
+      paymentLink.paidAt = paidAt ? new Date(paidAt) : new Date();
+
+      if (paymentLink.clientId && paymentLink.invoiceNumber) {
+        await PaymentHistory.findOneAndUpdate(
+          { invoiceNumber: paymentLink.invoiceNumber },
+          { status: 'Completed', paymentMethod: 'PayPal', notes: 'Marked paid via PayPal invoice sync' }
+        );
+      }
+      await sendAdminPaymentNotification({
+        clientName: paymentLink.clientName,
+        amount: paymentLink.total,
+        invoiceNumber: paymentLink.invoiceNumber,
+        packageName: paymentLink.packageName,
+        paymentMethod: 'PayPal',
+        linkId: paymentLink.linkId
+      });
+    }
+
+    await paymentLink.save();
+    res.json({ paypalInvoiceStatus: status, paypalInvoiceUrl: paymentLink.paypalInvoiceUrl, status: paymentLink.status });
+  } catch (err) {
+    console.error('Error syncing PayPal status:', err);
+    res.status(500).json({ message: 'Error syncing PayPal status', error: err.message });
+  }
+};
+
+// PayPal webhook — called by PayPal when invoice status changes
+export const paypalWebhook = async (req, res) => {
+  try {
+    const event = req.body;
+    const eventType = event?.event_type;
+
+    if (!eventType) return res.status(400).json({ message: 'Invalid webhook payload' });
+
+    // Acknowledge immediately so PayPal doesn't retry
+    res.status(200).json({ received: true });
+
+    const resource = event.resource || {};
+    const paypalInvoiceId = resource.id;
+    if (!paypalInvoiceId) return;
+
+    const paymentLink = await PaymentLink.findOne({ paypalInvoiceId });
+    if (!paymentLink) {
+      console.log(`Webhook: No payment link found for PayPal invoice ${paypalInvoiceId}`);
+      return;
+    }
+
+    if (eventType === 'INVOICING.INVOICE.PAID') {
+      paymentLink.paypalInvoiceStatus = 'PAID';
+      if (paymentLink.status !== 'Paid') {
+        paymentLink.status = 'Paid';
+        paymentLink.paidAt = new Date();
+
+        if (paymentLink.clientId && paymentLink.invoiceNumber) {
+          await PaymentHistory.findOneAndUpdate(
+            { invoiceNumber: paymentLink.invoiceNumber },
+            { status: 'Completed', paymentMethod: 'PayPal', notes: `Paid via PayPal invoice — ID: ${paypalInvoiceId}` }
+          );
+          await logActivity({
+            userId: paymentLink.clientId,
+            action: 'payment_completed',
+            entityType: 'PaymentLink',
+            entityId: paymentLink._id,
+            description: `PayPal invoice paid for ${paymentLink.clientName} — $${paymentLink.total}`,
+            details: { paypalInvoiceId, invoiceNumber: paymentLink.invoiceNumber },
+            module: 'Payments'
+          });
+        }
+        await sendAdminPaymentNotification({
+          clientName: paymentLink.clientName,
+          amount: paymentLink.total,
+          invoiceNumber: paymentLink.invoiceNumber,
+          packageName: paymentLink.packageName,
+          paymentMethod: 'PayPal',
+          linkId: paymentLink.linkId
+        });
+      }
+    } else if (eventType === 'INVOICING.INVOICE.CANCELLED') {
+      paymentLink.paypalInvoiceStatus = 'CANCELLED';
+    } else if (eventType === 'INVOICING.INVOICE.REFUNDED') {
+      paymentLink.paypalInvoiceStatus = 'REFUNDED';
+      paymentLink.status = 'Failed';
+      if (paymentLink.clientId && paymentLink.invoiceNumber) {
+        await PaymentHistory.findOneAndUpdate(
+          { invoiceNumber: paymentLink.invoiceNumber },
+          { status: 'Refunded', notes: `Refunded via PayPal — ID: ${paypalInvoiceId}` }
+        );
+      }
+    }
+
+    await paymentLink.save();
+    console.log(`PayPal webhook processed: ${eventType} for invoice ${paypalInvoiceId}`);
+  } catch (err) {
+    console.error('PayPal webhook error:', err);
+  }
+};

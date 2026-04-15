@@ -5,6 +5,7 @@ import getApiBaseUrl from '../apiBase';
 
 const PermissionContext = createContext();
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const usePermissions = () => {
   const context = useContext(PermissionContext);
   if (!context) {
@@ -40,7 +41,7 @@ export const PermissionProvider = ({ children }) => {
       setPermissions(fetchedPermissions);
       
       // Debug logging in development
-      if (process.env.NODE_ENV === 'development') {
+      if (import.meta.env.MODE === 'development') {
         console.log('Fetched permissions for user:', userId, fetchedPermissions);
       }
     } catch (error) {

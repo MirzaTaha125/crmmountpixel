@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import getApiBaseUrl from '../apiBase';
-import { FaFilter, FaSearch, FaDownload, FaClock, FaUser, FaTag, FaBox, FaTrash } from 'react-icons/fa';
+import { FaFilter, FaSearch, FaClock, FaUser, FaBox, FaTrash } from 'react-icons/fa';
+import { getColors, theme } from '../theme';
 
 const API_URL = getApiBaseUrl();
 
-function ActivityLogsPage({ colors }) {
+function ActivityLogsPage({ colors: colorsProp }) {
+  const colors = colorsProp || getColors();
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -45,7 +47,7 @@ function ActivityLogsPage({ colors }) {
       const params = new URLSearchParams({
         page: page.toString(),
         limit: '50',
-        ...Object.fromEntries(Object.entries(filters).filter(([_, v]) => v !== ''))
+        ...Object.fromEntries(Object.entries(filters).filter(([_k, v]) => v !== ''))
       });
 
       const response = await axios.get(`${API_URL}/api/activity-logs?${params}`, {
@@ -136,10 +138,8 @@ function ActivityLogsPage({ colors }) {
       setPage(1);
       await fetchLogs();
       await fetchStats();
-      alert('Activity logs cleared successfully!');
     } catch (err) {
       console.error('Error clearing logs:', err);
-      alert(err.response?.data?.error || err.response?.data?.message || 'Failed to clear activity logs');
     } finally {
       setClearing(false);
     }
@@ -167,503 +167,429 @@ function ActivityLogsPage({ colors }) {
     return '#95a5a6';
   };
 
-  const getActionIcon = (action) => {
-    // Return empty string - emojis removed
-    return '';
-  };
-
   return (
-    <div style={{ width: '100%' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <h2 style={{ color: colors.text, fontWeight: 700, fontSize: 28 }}>Activity Logs</h2>
-        <div style={{ display: 'flex', gap: 12 }}>
+    <div style={{ width: '100%', fontFamily: 'inherit' }}>
+      {/* HEADER ROW */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: theme.spacing.lg,
+        background: colors.white,
+        padding: theme.spacing.md,
+        borderRadius: theme.radius.lg,
+        border: `1px solid ${colors.borderLight}`,
+        boxShadow: theme.shadows.sm,
+        flexWrap: 'wrap',
+        gap: theme.spacing.md
+      }} className="audit-header">
+        <style>{`
+          @media (max-width: 600px) {
+            .audit-header {
+              flex-direction: column !important;
+              align-items: flex-start !important;
+            }
+            .audit-header > div:last-child {
+              width: 100% !important;
+              flex-direction: column !important;
+              gap: ${theme.spacing.sm} !important;
+            }
+            .audit-header button {
+              width: 100% !important;
+              justify-content: center !important;
+            }
+            .audit-filters-grid {
+              grid-template-columns: 1fr !important;
+            }
+            .audit-pagination {
+              flex-direction: column !important;
+              gap: ${theme.spacing.md} !important;
+              align-items: center !important;
+              text-align: center !important;
+            }
+          }
+        `}</style>
+        <div>
+          <h2 style={{ fontSize: theme.typography.fontSizes.lg, fontWeight: 'bold', color: colors.textPrimary, margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            System Audit Logs
+          </h2>
+          <p style={{ fontSize: '10px', color: colors.textTertiary, margin: 0, fontWeight: 'bold', textTransform: 'uppercase' }}>
+            Transaction & Security History
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: theme.spacing.md }}>
           <button
             onClick={() => setShowFilters(!showFilters)}
             style={{
-              padding: '10px 20px',
-              background: colors.accent,
-              color: '#fff',
-              border: 'none',
-              borderRadius: 7,
+              padding: `${theme.spacing.sm} ${theme.spacing.xl}`,
+              background: colors.white,
+              color: colors.textPrimary,
+              border: `1px solid ${colors.border}`,
+              borderRadius: theme.radius.md,
+              fontWeight: 'bold',
+              fontSize: theme.typography.fontSizes['2xs'],
+              textTransform: 'uppercase',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: 8,
-              fontWeight: 600
+              gap: theme.spacing.sm,
+              boxShadow: theme.shadows.sm
             }}
           >
-            <FaFilter /> {showFilters ? 'Hide Filters' : 'Show Filters'}
+            <FaFilter /> {showFilters ? 'Hide Filters' : 'Apply Filters'}
           </button>
           <button
             onClick={() => setShowClearModal(true)}
             style={{
-              padding: '10px 20px',
-              background: '#e74c3c',
-              color: '#fff',
+              padding: `${theme.spacing.sm} ${theme.spacing.xl}`,
+              background: colors.error,
+              color: colors.white,
               border: 'none',
-              borderRadius: 7,
+              borderRadius: theme.radius.md,
+              fontWeight: 'bold',
+              fontSize: theme.typography.fontSizes['2xs'],
+              textTransform: 'uppercase',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: 8,
-              fontWeight: 600
+              gap: theme.spacing.sm,
+              boxShadow: theme.shadows.sm
             }}
           >
-            <FaTrash /> Clear Logs
+            <FaTrash /> Purge Logs
           </button>
         </div>
       </div>
 
-      {/* Statistics Cards */}
+      {/* QUICK STATS ROW */}
       {stats && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 24 }}>
-          <div style={{ background: colors.cardBg, padding: 20, borderRadius: 10, border: `1px solid ${colors.border}` }}>
-            <div style={{ color: colors.muted, fontSize: 14, marginBottom: 8 }}>Total Activities</div>
-            <div style={{ color: colors.text, fontSize: 32, fontWeight: 700 }}>{stats.total || 0}</div>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+          gap: '1px',
+          borderRadius: theme.radius.lg,
+          overflow: 'hidden',
+          boxShadow: theme.shadows.sm,
+          background: colors.border,
+          marginBottom: theme.spacing.lg
+        }}>
+          <div style={{ padding: theme.spacing.md, background: colors.tableHeaderBg }}>
+            <div style={{ fontSize: '9px', fontWeight: 'bold', color: colors.textTertiary, textTransform: 'uppercase', marginBottom: '4px' }}>Total Events</div>
+            <div style={{ fontSize: theme.typography.fontSizes.lg, fontWeight: 'bold', color: colors.textPrimary }}>{stats.total?.toLocaleString() || 0}</div>
           </div>
-          <div style={{ background: colors.cardBg, padding: 20, borderRadius: 10, border: `1px solid ${colors.border}` }}>
-            <div style={{ color: colors.muted, fontSize: 14, marginBottom: 8 }}>Top Module</div>
-            <div style={{ color: colors.text, fontSize: 18, fontWeight: 600 }}>
+          <div style={{ padding: theme.spacing.md, background: colors.white }}>
+            <div style={{ fontSize: '9px', fontWeight: 'bold', color: colors.textTertiary, textTransform: 'uppercase', marginBottom: '4px' }}>Active Module</div>
+            <div style={{ fontSize: theme.typography.fontSizes.xs, fontWeight: 'bold', color: colors.textPrimary, textTransform: 'uppercase' }}>
               {stats.byModule && stats.byModule.length > 0 ? stats.byModule[0]._id : 'N/A'}
+            </div>
+          </div>
+          <div style={{ padding: theme.spacing.md, background: colors.white }}>
+            <div style={{ fontSize: '9px', fontWeight: 'bold', color: colors.textTertiary, textTransform: 'uppercase', marginBottom: '4px' }}>Critical Errors</div>
+            <div style={{ fontSize: theme.typography.fontSizes.lg, fontWeight: 'bold', color: colors.error }}>
+              {stats.byAction?.find(a => a._id?.includes('failed'))?.count || 0}
             </div>
           </div>
         </div>
       )}
 
-      {/* Filters */}
+      {/* FILTERS PANEL */}
       {showFilters && (
         <div style={{ 
-          background: colors.cardBg, 
-          padding: 20, 
-          borderRadius: 10, 
-          marginBottom: 24,
-          border: `1px solid ${colors.border}`
+          background: colors.white, 
+          padding: theme.spacing.lg, 
+          marginBottom: theme.spacing.lg,
+          borderRadius: theme.radius.md,
+          border: `1px solid ${colors.borderLight}`,
+          boxShadow: theme.shadows.sm
         }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
+        }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: theme.spacing.md }} className="audit-filters-grid">
             <div>
-              <label style={{ display: 'block', marginBottom: 6, color: colors.text, fontWeight: 600 }}>Search</label>
-              <input
-                type="text"
-                name="search"
-                value={filters.search}
-                onChange={handleFilterChange}
-                placeholder="Search in descriptions..."
-                style={{
-                  width: '100%',
-                  padding: 10,
-                  borderRadius: 7,
-                  border: `1px solid ${colors.border}`,
-                  background: colors.accentLight,
-                  color: colors.text
-                }}
-              />
+              <label style={{ display: 'block', fontSize: '9px', fontWeight: 'bold', color: colors.textSecondary, marginBottom: '4px', textTransform: 'uppercase' }}>Search Description</label>
+              <div style={{ position: 'relative' }}>
+                <FaSearch style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '10px', color: colors.textTertiary }} />
+                <input
+                  type="text"
+                  name="search"
+                  value={filters.search}
+                  onChange={handleFilterChange}
+                  placeholder="Keyword lookup..."
+                  style={{ width: '100%', padding: '8px 10px 8px 30px', border: `1px solid ${colors.border}`, borderRadius: theme.radius.sm, fontSize: theme.typography.fontSizes.xs, background: colors.white, outline: 'none' }}
+                />
+              </div>
             </div>
             <div>
-              <label style={{ display: 'block', marginBottom: 6, color: colors.text, fontWeight: 600 }}>Action</label>
+              <label style={{ display: 'block', fontSize: '9px', fontWeight: 'bold', color: colors.textSecondary, marginBottom: '4px', textTransform: 'uppercase' }}>Event Action</label>
               <select
                 name="action"
                 value={filters.action}
                 onChange={handleFilterChange}
-                style={{
-                  width: '100%',
-                  padding: 10,
-                  borderRadius: 7,
-                  border: `1px solid ${colors.border}`,
-                  background: colors.accentLight,
-                  color: colors.text
-                }}
+                style={{ width: '100%', padding: '8px', border: `1px solid ${colors.border}`, borderRadius: theme.radius.sm, fontSize: theme.typography.fontSizes.xs, background: colors.white, outline: 'none' }}
               >
-                <option value="">All Actions</option>
-                <option value="user_created">User Created</option>
-                <option value="user_updated">User Updated</option>
-                <option value="user_deleted">User Deleted</option>
-                <option value="client_created">Client Created</option>
-                <option value="client_updated">Client Updated</option>
-                <option value="client_deleted">Client Deleted</option>
-                <option value="payment_link_created">Payment Link Created</option>
-                <option value="payment_link_updated">Payment Link Updated</option>
-                <option value="payment_link_deleted">Payment Link Deleted</option>
-                <option value="payment_completed">Payment Completed</option>
-                <option value="payment_created">Payment Created</option>
-                <option value="payment_updated">Payment Updated</option>
-                <option value="payment_deleted">Payment Deleted</option>
-                <option value="payment_status_changed">Payment Status Changed</option>
-                <option value="user_login">User Login</option>
-                <option value="user_logout">User Logout</option>
-                <option value="user_login_failed">User Login Failed</option>
-                <option value="client_login">Client Login</option>
-                <option value="client_logout">Client Logout</option>
-                <option value="client_login_failed">Client Login Failed</option>
+                <option value="">All History</option>
+                <option value="user_login">User Authentication</option>
+                <option value="user_created">User Creation</option>
+                <option value="payment_completed">Payment Settlement</option>
+                <option value="client_created">Client Onboarding</option>
+                <option value="user_login_failed">Login Failures</option>
               </select>
             </div>
             <div>
-              <label style={{ display: 'block', marginBottom: 6, color: colors.text, fontWeight: 600 }}>Module</label>
+              <label style={{ display: 'block', fontSize: '9px', fontWeight: 'bold', color: colors.textSecondary, marginBottom: '4px', textTransform: 'uppercase' }}>Target Module</label>
               <select
                 name="module"
                 value={filters.module}
                 onChange={handleFilterChange}
-                style={{
-                  width: '100%',
-                  padding: 10,
-                  borderRadius: 7,
-                  border: `1px solid ${colors.border}`,
-                  background: colors.accentLight,
-                  color: colors.text
-                }}
+                style={{ width: '100%', padding: '8px', border: `1px solid ${colors.border}`, borderRadius: theme.radius.sm, fontSize: theme.typography.fontSizes.xs, background: colors.white, outline: 'none' }}
               >
-                <option value="">All Modules</option>
-                <option value="Users">Users</option>
-                <option value="Clients">Clients</option>
-                <option value="Payments">Payments</option>
-                <option value="Packages">Packages</option>
-                <option value="Employees">Employees</option>
-                <option value="Expenses">Expenses</option>
-                <option value="Inquiries">Inquiries</option>
-                <option value="Authentication">Authentication</option>
+                <option value="">Full System</option>
+                <option value="Users">Management</option>
+                <option value="Clients">CRM</option>
+                <option value="Payments">Finance</option>
+                <option value="Authentication">Security</option>
               </select>
             </div>
             <div>
-              <label style={{ display: 'block', marginBottom: 6, color: colors.text, fontWeight: 600 }}>Start Date</label>
+              <label style={{ display: 'block', fontSize: '9px', fontWeight: 'bold', color: colors.textSecondary, marginBottom: '4px', textTransform: 'uppercase' }}>Start</label>
               <input
                 type="date"
                 name="startDate"
                 value={filters.startDate}
                 onChange={handleFilterChange}
-                style={{
-                  width: '100%',
-                  padding: 10,
-                  borderRadius: 7,
-                  border: `1px solid ${colors.border}`,
-                  background: colors.accentLight,
-                  color: colors.text
-                }}
+                style={{ width: '100%', padding: '7px', border: `1px solid ${colors.border}`, borderRadius: theme.radius.sm, fontSize: theme.typography.fontSizes.xs, background: colors.white, outline: 'none' }}
               />
             </div>
             <div>
-              <label style={{ display: 'block', marginBottom: 6, color: colors.text, fontWeight: 600 }}>End Date</label>
+              <label style={{ display: 'block', fontSize: '9px', fontWeight: 'bold', color: colors.textSecondary, marginBottom: '4px', textTransform: 'uppercase' }}>End</label>
               <input
                 type="date"
                 name="endDate"
                 value={filters.endDate}
                 onChange={handleFilterChange}
-                style={{
-                  width: '100%',
-                  padding: 10,
-                  borderRadius: 7,
-                  border: `1px solid ${colors.border}`,
-                  background: colors.accentLight,
-                  color: colors.text
-                }}
+                style={{ width: '100%', padding: '7px', border: `1px solid ${colors.border}`, borderRadius: theme.radius.sm, fontSize: theme.typography.fontSizes.xs, background: colors.white, outline: 'none' }}
               />
             </div>
           </div>
-          <button
-            onClick={clearFilters}
-            style={{
-              marginTop: 16,
-              padding: '8px 16px',
-              background: colors.accentLight,
-              color: colors.text,
-              border: `1px solid ${colors.border}`,
-              borderRadius: 7,
-              cursor: 'pointer',
-              fontWeight: 600
-            }}
-          >
-            Clear Filters
-          </button>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: theme.spacing.md }}>
+            <button
+              onClick={clearFilters}
+              style={{ padding: '6px 12px', background: 'transparent', color: colors.textSecondary, border: `1px solid ${colors.border}`, borderRadius: theme.radius.md, fontSize: '9px', fontWeight: 'bold', textTransform: 'uppercase', cursor: 'pointer' }}
+            >
+              Reset Filters
+            </button>
+          </div>
         </div>
       )}
 
-      {/* Error Message */}
+      {/* ERROR DISPLAY */}
       {error && (
-        <div style={{
-          background: '#fee',
-          color: '#c33',
-          padding: 12,
-          borderRadius: 7,
-          marginBottom: 16,
-          border: '1px solid #fcc'
-        }}>
+        <div style={{ background: colors.errorBg, color: colors.error, padding: theme.spacing.md, marginBottom: theme.spacing.md, fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase' }}>
           {error}
         </div>
       )}
 
-      {/* Logs Table */}
-      {loading ? (
-        <div style={{ textAlign: 'center', padding: 40, color: colors.muted }}>Loading logs...</div>
-      ) : logs.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 40, color: colors.muted }}>No activity logs found</div>
-      ) : (
-        <>
-          <div style={{
-            background: colors.cardBg,
-            borderRadius: 10,
-            overflow: 'hidden',
-            border: `1px solid ${colors.border}`,
-            marginBottom: 16
-          }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ background: colors.accentLight, borderBottom: `2px solid ${colors.border}` }}>
-                  <th style={{ padding: 12, textAlign: 'left', color: colors.text, fontWeight: 700 }}>Time</th>
-                  <th style={{ padding: 12, textAlign: 'left', color: colors.text, fontWeight: 700 }}>User</th>
-                  <th style={{ padding: 12, textAlign: 'left', color: colors.text, fontWeight: 700 }}>Action</th>
-                  <th style={{ padding: 12, textAlign: 'left', color: colors.text, fontWeight: 700 }}>Module</th>
-                  <th style={{ padding: 12, textAlign: 'left', color: colors.text, fontWeight: 700 }}>IP Address</th>
-                  <th style={{ padding: 12, textAlign: 'left', color: colors.text, fontWeight: 700 }}>Description</th>
-                </tr>
-              </thead>
-              <tbody>
-                {logs.map((log) => (
-                  <tr key={log._id} style={{ borderBottom: `1px solid ${colors.border}` }}>
-                    <td style={{ padding: 12, color: colors.muted, fontSize: 14 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <FaClock style={{ fontSize: 12 }} />
-                        {formatDate(log.createdAt)}
-                      </div>
-                    </td>
-                    <td style={{ padding: 12, color: colors.text }}>
-                      {(() => {
-                        // For client actions and payment actions, prioritize showing client name from details
-                        const isClientAction = log.action && log.action.startsWith('client_');
-                        const isPaymentAction = log.action && (log.action.startsWith('payment_') || log.action.includes('payment'));
-                        
-                        if ((isClientAction || isPaymentAction) && log.details && log.details.clientName) {
-                          return (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                              <FaUser style={{ color: colors.muted }} />
-                              <span>
-                                {log.details.clientName}
-                                <span style={{ color: colors.muted, fontSize: 12, marginLeft: 8 }}>
-                                  (Client)
-                                </span>
-                              </span>
-                            </div>
-                          );
-                        }
-                        
-                        // Also check for details.name (for client_created, etc.)
-                        if ((isClientAction || isPaymentAction) && log.details && log.details.name) {
-                          return (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                              <FaUser style={{ color: colors.muted }} />
-                              <span>
-                                {log.details.name}
-                                <span style={{ color: colors.muted, fontSize: 12, marginLeft: 8 }}>
-                                  (Client)
-                                </span>
-                              </span>
-                            </div>
-                          );
-                        }
-                        
-                        // For other actions, show userId if available
-                        if (log.userId) {
-                          return (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <FaUser style={{ color: colors.muted }} />
-                          <span>
-                            {log.userId.First_Name} {log.userId.Last_Name}
-                            {log.userId.Role && (
-                              <span style={{ color: colors.muted, fontSize: 12, marginLeft: 8 }}>
-                                ({log.userId.Role})
-                              </span>
-                            )}
-                          </span>
-                        </div>
-                          );
-                        }
-                        
-                        // Fallback to details.name or details.clientName if available
-                        if (log.details) {
-                          const clientName = log.details.clientName || log.details.name;
-                          if (clientName) {
-                            return (
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <FaUser style={{ color: colors.muted }} />
-                                <span>
-                                  {clientName}
-                                  <span style={{ color: colors.muted, fontSize: 12, marginLeft: 8 }}>
-                                    (Client)
-                                  </span>
-                                </span>
-                              </div>
-                            );
-                          }
-                        }
-                        
-                        // Default to Unknown
-                        return <span style={{ color: colors.muted }}>Unknown</span>;
-                      })()}
-                    </td>
-                    <td style={{ padding: 12 }}>
-                      <span
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: 6,
-                          padding: '4px 12px',
-                          borderRadius: 20,
-                          background: getActionColor(log.action) + '20',
-                          color: getActionColor(log.action),
-                          fontWeight: 600,
-                          fontSize: 12
-                        }}
-                      >
-                        {log.action.replace(/_/g, ' ')}
-                      </span>
-                    </td>
-                    <td style={{ padding: 12, color: colors.text }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <FaBox style={{ color: colors.muted, fontSize: 12 }} />
-                        {log.module}
-                      </div>
-                    </td>
-                    <td style={{ padding: 12, color: colors.text, fontFamily: 'monospace', fontSize: 13 }}>
-                      {log.ipAddress || <span style={{ color: colors.muted }}>N/A</span>}
-                    </td>
-                    <td style={{ padding: 12, color: colors.text }}>{log.description}</td>
-                  </tr>
+      {/* LOGS TABLE */}
+      <div style={{ 
+        background: colors.white, 
+        borderRadius: theme.radius.lg, 
+        border: `1px solid ${colors.borderLight}`,
+        boxShadow: theme.shadows.md,
+        overflow: 'hidden'
+      }}>
+        <div style={{ 
+          overflowX: 'auto',
+          WebkitOverflowScrolling: 'touch'
+        }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '800px' }}>
+            <thead style={{ background: colors.tableHeaderBg }}>
+              <tr>
+                {['Timestamp', 'Subject', 'Action / Event', 'Module', 'Log Description'].map((h, idx) => (
+                  <th key={idx} style={{
+                    padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
+                    textAlign: 'left',
+                    fontSize: '9px',
+                    fontWeight: 'bold',
+                    color: colors.textPrimary,
+                    textTransform: 'uppercase',
+                    letterSpacing: '1px',
+                    borderBottom: `2px solid ${colors.border}`,
+                    borderRight: idx < 4 ? `1px solid ${colors.border}` : 'none'
+                  }}>
+                    {h}
+                  </th>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td colSpan={5} style={{ padding: theme.spacing['2xl'], textAlign: 'center', color: colors.textTertiary, fontSize: theme.typography.fontSizes.xs }}>Streaming server logs...</td></tr>
+              ) : logs.length === 0 ? (
+                <tr><td colSpan={5} style={{ padding: theme.spacing['2xl'], textAlign: 'center', color: colors.textTertiary, fontSize: theme.typography.fontSizes.xs }}>No activity recorded in index.</td></tr>
+              ) : logs.map((log, idx) => (
+                <tr key={log._id} style={{ 
+                  borderBottom: `1px solid ${colors.borderLight}`,
+                  background: colors.white, // Uniform white background
+                  transition: 'background 0.2s'
+                }}>
+                  <td style={{ padding: `${theme.spacing.sm} ${theme.spacing.lg}`, whiteSpace: 'nowrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: colors.textSecondary, fontSize: '10px', fontWeight: 'bold' }}>
+                      <FaClock /> {formatDate(log.createdAt)}
+                    </div>
+                  </td>
+                  <td style={{ padding: `${theme.spacing.sm} ${theme.spacing.lg}` }}>
+                    {(() => {
+                      const isClientAction = log.action && log.action.startsWith('client_');
+                      const isPaymentAction = log.action && (log.action.startsWith('payment_') || log.action.includes('payment'));
+                      let displaySubject = 'UNKNOWN';
+                      let subjectType = '';
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16 }}>
-              <div style={{ color: colors.muted }}>
-                Showing {((page - 1) * 50) + 1} to {Math.min(page * 50, total)} of {total} logs
-              </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                  style={{
-                    padding: '8px 16px',
-                    background: page === 1 ? colors.accentLight : colors.accent,
-                    color: page === 1 ? colors.muted : '#fff',
-                    border: 'none',
-                    borderRadius: 7,
-                    cursor: page === 1 ? 'not-allowed' : 'pointer',
-                    fontWeight: 600
-                  }}
-                >
-                  Previous
-                </button>
-                <span style={{ padding: '8px 16px', color: colors.text, fontWeight: 600 }}>
-                  Page {page} of {totalPages}
-                </span>
-                <button
-                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages}
-                  style={{
-                    padding: '8px 16px',
-                    background: page === totalPages ? colors.accentLight : colors.accent,
-                    color: page === totalPages ? colors.muted : '#fff',
-                    border: 'none',
-                    borderRadius: 7,
-                    cursor: page === totalPages ? 'not-allowed' : 'pointer',
-                    fontWeight: 600
-                  }}
-                >
-                  Next
-                </button>
-              </div>
+                      if ((isClientAction || isPaymentAction) && log.details && (log.details.clientName || log.details.name)) {
+                        displaySubject = log.details.clientName || log.details.name;
+                        subjectType = 'CLIENT';
+                      } else if (log.userId) {
+                        displaySubject = `${log.userId.First_Name} ${log.userId.Last_Name}`;
+                        subjectType = log.userId.Role || 'USER';
+                      }
+
+                      return (
+                        <div>
+                          <div style={{ fontWeight: 'bold', fontSize: theme.typography.fontSizes.xs, color: colors.textPrimary, textTransform: 'uppercase' }}>{displaySubject}</div>
+                          {subjectType && <div style={{ fontSize: '9px', color: colors.textTertiary, fontWeight: 'bold' }}>TYPE: {subjectType} {log.ipAddress ? `[${log.ipAddress}]` : ''}</div>}
+                        </div>
+                      );
+                    })()}
+                  </td>
+                  <td style={{ padding: `${theme.spacing.sm} ${theme.spacing.lg}` }}>
+                    <span style={{
+                      display: 'inline-block',
+                      padding: '4px 8px',
+                      background: getActionColor(log.action) + '22',
+                      color: getActionColor(log.action),
+                      fontWeight: 'bold',
+                      fontSize: '9px',
+                      textTransform: 'uppercase',
+                      borderRadius: theme.radius.full, // Standardized full radius
+                      border: `1px solid ${getActionColor(log.action)}33`
+                    }}>
+                      {log.action.replace(/_/g, ' ')}
+                    </span>
+                  </td>
+                  <td style={{ padding: `${theme.spacing.sm} ${theme.spacing.lg}` }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '9px', fontWeight: 'bold', color: colors.textSecondary, textTransform: 'uppercase' }}>
+                      <FaBox style={{ opacity: 0.5 }} /> {log.module}
+                    </div>
+                  </td>
+                  <td style={{ padding: `${theme.spacing.sm} ${theme.spacing.lg}`, fontSize: theme.typography.fontSizes.xs, color: colors.textPrimary }}>
+                    {log.description}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* PAGINATION ROW */}
+      {totalPages > 1 && (
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          padding: theme.spacing.md, 
+          background: colors.white, 
+          borderRadius: theme.radius.md,
+          border: `1px solid ${colors.borderLight}`,
+          boxShadow: theme.shadows.sm,
+          marginTop: theme.spacing.md,
+          flexWrap: 'wrap'
+        }} className="audit-pagination">
+          <div style={{ fontSize: '10px', fontWeight: 'bold', color: colors.textTertiary, textTransform: 'uppercase' }}>
+            Displaying {((page - 1) * 50) + 1} - {Math.min(page * 50, total)} of {total} Records
+          </div>
+          <div style={{ display: 'flex', gap: '2px' }}>
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+              style={{
+                padding: '6px 12px',
+                background: page === 1 ? colors.white : colors.sidebarBg,
+                color: page === 1 ? colors.textTertiary : colors.white,
+                border: `1px solid ${colors.border}`,
+                borderRadius: `${theme.radius.sm} 0 0 ${theme.radius.sm}`,
+                fontWeight: 'bold',
+                fontSize: '10px',
+                cursor: page === 1 ? 'not-allowed' : 'pointer',
+                textTransform: 'uppercase'
+              }}
+            >
+              Prev
+            </button>
+            <div style={{ padding: '6px 12px', border: `1px solid ${colors.border}`, fontSize: '10px', fontWeight: 'bold', color: colors.textPrimary }}>
+              PAGE {page} / {totalPages}
             </div>
-          )}
-        </>
+            <button
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              style={{
+                padding: '6px 12px',
+                background: page === totalPages ? colors.white : colors.sidebarBg,
+                color: page === totalPages ? colors.textTertiary : colors.white,
+                border: `1px solid ${colors.border}`,
+                borderRadius: `0 ${theme.radius.sm} ${theme.radius.sm} 0`,
+                fontWeight: 'bold',
+                fontSize: '10px',
+                cursor: page === totalPages ? 'not-allowed' : 'pointer',
+                textTransform: 'uppercase'
+              }}
+            >
+              Next
+            </button>
+          </div>
+        </div>
       )}
 
-      {/* Clear Logs Modal */}
+      {/* PURGE MODAL */}
       {showClearModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '100vw',
-          height: '100vh',
-          background: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            background: colors.cardBg,
-            borderRadius: 10,
-            padding: 24,
-            minWidth: 400,
-            maxWidth: 500,
-            border: `1px solid ${colors.border}`
-          }}>
-            <h3 style={{ color: colors.text, marginBottom: 16, fontWeight: 700 }}>Clear Activity Logs</h3>
-            <p style={{ color: colors.muted, marginBottom: 20, lineHeight: 1.6 }}>
-              This will permanently delete activity logs. This action cannot be undone.
-            </p>
-            
-            <div style={{ marginBottom: 20 }}>
-              <label style={{ display: 'block', marginBottom: 8, color: colors.text, fontWeight: 600 }}>
-                Clear logs older than (days) - Leave empty to clear all logs
-              </label>
-              <input
-                type="number"
-                value={clearDays}
-                onChange={(e) => setClearDays(e.target.value)}
-                placeholder="e.g., 30 (to clear logs older than 30 days)"
-                min="1"
-                style={{
-                  width: '100%',
-                  padding: 10,
-                  borderRadius: 7,
-                  border: `1px solid ${colors.border}`,
-                  background: colors.accentLight,
-                  color: colors.text
-                }}
-              />
-              {clearDays && (
-                <p style={{ color: colors.muted, fontSize: 12, marginTop: 8 }}>
-                  This will delete logs older than {clearDays} days
-                </p>
-              )}
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: theme.spacing.md }}>
+          <div style={{ background: colors.white, borderRadius: theme.radius.xl, width: '95%', maxWidth: 450, boxShadow: theme.shadows.xl, border: `1px solid ${colors.border}`, overflow: 'hidden' }}>
+            <div style={{ background: colors.tableHeaderBg, padding: `15px 20px`, color: colors.textPrimary, fontWeight: 'bold', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', borderBottom: `2px solid ${colors.border}`, borderRadius: `${theme.radius.xl} ${theme.radius.xl} 0 0` }}>
+              Purge System History
             </div>
+            
+            <div style={{ padding: theme.spacing.xl }}>
+              <p style={{ fontSize: theme.typography.fontSizes.xs, color: colors.textSecondary, marginBottom: theme.spacing.lg, lineHeight: 1.5 }}>
+                Select retention policy. Records deleted via this manual trigger are permanently removed from the primary index.
+              </p>
+              
+              <div style={{ marginBottom: theme.spacing.xl }}>
+                <label style={{ display: 'block', fontSize: '10px', fontWeight: 'bold', color: colors.textSecondary, marginBottom: '4px', textTransform: 'uppercase' }}>Older Than (Days)</label>
+                <input
+                  type="number"
+                  value={clearDays}
+                  onChange={(e) => setClearDays(e.target.value)}
+                  placeholder="Leave empty for full purge..."
+                  min="1"
+                  style={{ width: '100%', padding: theme.spacing.sm, borderRadius: theme.radius.md, border: `1px solid ${colors.border}`, fontSize: theme.typography.fontSizes.xs, background: colors.white, outline: 'none' }}
+                />
+                {clearDays && <p style={{ color: colors.warningDark, fontSize: '9px', fontWeight: 'bold', marginTop: '6px', textTransform: 'uppercase' }}>POLICY: DELETING LOGS STORED BEFORE {(parseInt(clearDays) || 0)} DAYS AGO</p>}
+              </div>
 
-            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-              <button
-                onClick={() => {
-                  setShowClearModal(false);
-                  setClearDays('');
-                }}
-                disabled={clearing}
-                style={{
-                  padding: '10px 20px',
-                  background: colors.accentLight,
-                  color: colors.text,
-                  border: `1px solid ${colors.border}`,
-                  borderRadius: 7,
-                  cursor: 'pointer',
-                  fontWeight: 600
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleClearLogs}
-                disabled={clearing}
-                style={{
-                  padding: '10px 20px',
-                  background: '#e74c3c',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: 7,
-                  cursor: clearing ? 'not-allowed' : 'pointer',
-                  fontWeight: 600,
-                  opacity: clearing ? 0.6 : 1
-                }}
-              >
-                {clearing ? 'Clearing...' : 'Clear Logs'}
-              </button>
+              <div style={{ display: 'flex', gap: theme.spacing.md, justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => { setShowClearModal(false); setClearDays(''); }}
+                  disabled={clearing}
+                  style={{ padding: `${theme.spacing.sm} ${theme.spacing.xl}`, background: colors.white, color: colors.textSecondary, border: `1px solid ${colors.border}`, borderRadius: theme.radius.md, fontWeight: 'bold', fontSize: theme.typography.fontSizes['2xs'], textTransform: 'uppercase', cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleClearLogs}
+                  disabled={clearing}
+                  style={{ padding: `${theme.spacing.sm} ${theme.spacing.xl}`, background: colors.error, color: colors.white, border: 'none', borderRadius: theme.radius.md, fontWeight: 'bold', fontSize: theme.typography.fontSizes['2xs'], textTransform: 'uppercase', cursor: clearing ? 'not-allowed' : 'pointer', boxShadow: theme.shadows.sm }}
+                >
+                  {clearing ? 'Executing Purge...' : 'Authorize Purge'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -673,4 +599,3 @@ function ActivityLogsPage({ colors }) {
 }
 
 export default ActivityLogsPage;
-

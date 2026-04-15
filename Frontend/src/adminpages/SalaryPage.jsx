@@ -2,8 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import jsPDF from 'jspdf';
 import getApiBaseUrl from '../apiBase';
-import bgImage from '../assets/png-01.png'; // Ensure it's a base64 or bundled correctly
-import { FaTrash, FaFilePdf, FaEllipsisV } from 'react-icons/fa';
+// bgImage import removed (unused)
+import { FaTrash, FaFilePdf, FaEllipsisV, FaPlus, FaTimes, FaSearch, FaFilter } from 'react-icons/fa';
 import { theme } from '../theme';
 
 const API_URL = getApiBaseUrl();
@@ -13,8 +13,8 @@ function SalaryPage({ salaries, employees, colors, refreshSalaries }) {
   const [filterEmployeeName, setFilterEmployeeName] = useState('');
   const [filterMonth, setFilterMonth] = useState('');
   const [filterYear, setFilterYear] = useState('');
-  const [salaryLoading, setSalaryLoading] = useState(false);
-  const [salaryError, setSalaryError] = useState('');
+  const [salaryLoading, _setSalaryLoading] = useState(false);
+  const [_salaryError, _setSalaryError] = useState('');
   const [openMenuId, setOpenMenuId] = useState(null);
 
   // Modal state
@@ -202,7 +202,7 @@ function SalaryPage({ salaries, employees, colors, refreshSalaries }) {
     '', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'
   ];
   const currentYear = new Date().getFullYear();
-  const currentMonth = new Date().getMonth() + 1;
+  const _currentMonth = new Date().getMonth() + 1;
   const yearOptions = Array.from({length: 11}, (_, i) => currentYear - 5 + i);
 
   // Helper function to get previous month
@@ -283,7 +283,7 @@ function SalaryPage({ salaries, employees, colors, refreshSalaries }) {
       const pageHeight = doc.internal.pageSize.getHeight(); // A4 height: 297mm
       
       // Company colors
-      const primaryColor = [239, 39, 90]; // Mount Pixels pink/red
+      const _primaryColor = [239, 39, 90]; // Mount Pixels pink/red
       const accentColor = [239, 39, 90];
       const textColor = [33, 33, 33];
       const textSecondary = [102, 102, 102];
@@ -307,7 +307,7 @@ function SalaryPage({ salaries, employees, colors, refreshSalaries }) {
       if (logoBase64) {
         try {
           doc.addImage(logoBase64, 'WEBP', 20, 12, 35, 32);
-        } catch (e) {
+        } catch {
           // Fallback if image fails
       doc.setFontSize(18);
           doc.setFont('helvetica', 'bold');
@@ -557,7 +557,7 @@ function SalaryPage({ salaries, employees, colors, refreshSalaries }) {
   // Helper function to generate a single salary slip page (for bulk export)
   const generateSalarySlipPage = async (doc, salary, pageWidth, pageHeight) => {
     // Company colors
-    const primaryColor = [239, 39, 90]; // Mount Pixels pink/red
+    const _primaryColor = [239, 39, 90]; // Mount Pixels pink/red
     const accentColor = [239, 39, 90];
     const textColor = [33, 33, 33];
     const textSecondary = [102, 102, 102];
@@ -581,7 +581,7 @@ function SalaryPage({ salaries, employees, colors, refreshSalaries }) {
     if (logoBase64) {
       try {
         doc.addImage(logoBase64, 'WEBP', 20, 12, 35, 32);
-      } catch (e) {
+      } catch {
         // Fallback if image fails
         doc.setFontSize(18);
         doc.setFont('helvetica', 'bold');
@@ -849,7 +849,7 @@ function SalaryPage({ salaries, employees, colors, refreshSalaries }) {
       await axios.delete(`${API_URL}/api/salaries/${salary._id}`);
       // Refresh salaries from parent
       if (refreshSalaries) refreshSalaries();
-    } catch (err) {
+    } catch {
       alert('Error deleting salary');
     } finally {
       setDeleteLoading('');
@@ -857,70 +857,239 @@ function SalaryPage({ salaries, employees, colors, refreshSalaries }) {
   };
 
   return (
-    <div className="main-container" style={{ border: `1px solid ${colors.border}`, borderRadius: 18, background: colors.cardBg, boxShadow: colors.cardShadow, padding: 36, width: '95%', height: '100%', maxWidth: 'none', margin: 0, minHeight: 'calc(100vh - 100px)' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
-        <h2 style={{ fontSize: 32, fontWeight: 900, color: colors.text, letterSpacing: 1 }}>Salary</h2>
-        {/* Filters */}
-        <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
-          <input
-            type="text"
-            placeholder="Search by employee name..."
-            value={filterEmployeeName}
-            onChange={handleEmployeeFilter}
-            style={{ padding: 10, borderRadius: 7, border: `1px solid ${colors.border}`, fontSize: 16, background: colors.accentLight, minWidth: 180 }}
-          />
-          <select value={filterMonth} onChange={handleMonthFilter} style={{ padding: 8, borderRadius: 6, border: `1px solid ${colors.border}` }}>
-            <option value=''>All Months</option>
-            {monthNames.slice(1).map((m, idx) => <option key={idx+1} value={idx+1}>{m}</option>)}
-          </select>
-          <select value={filterYear} onChange={handleYearFilter} style={{ padding: 8, borderRadius: 6, border: `1px solid ${colors.border}` }}>
-            <option value=''>All Years</option>
-            {Array.from(new Set(salaries.map(s => s.year))).sort((a, b) => a - b).map(y => <option key={y} value={y}>{y}</option>)}
-          </select>
-          <button onClick={() => setShowCreateModal(true)} style={{ marginLeft: 'auto', background: colors.accent, color: '#fff', border: 'none', borderRadius: 6, padding: '8px 18px', fontWeight: 700, cursor: 'pointer' }}>Create Salary</button>
-          <button onClick={() => setShowBulkModal(true)} style={{ background: colors.accentLight, color: colors.accent, border: 'none', borderRadius: 6, padding: '8px 18px', fontWeight: 700, cursor: 'pointer' }}>Bulk Salary</button>
+    <div style={{ width: '100%', fontFamily: 'inherit' }}>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: theme.spacing.lg,
+        background: colors.white,
+        padding: theme.spacing.md,
+        borderRadius: theme.radius.lg,
+        border: `1px solid ${colors.borderLight}`,
+        boxShadow: theme.shadows.sm,
+        flexWrap: 'wrap',
+        gap: theme.spacing.md
+      }} className="salary-header">
+        <style>{`
+          @media (max-width: 600px) {
+            .salary-header {
+              flex-direction: column !important;
+              align-items: flex-start !important;
+            }
+            .salary-header > div:last-child {
+              width: 100% !important;
+              flex-direction: column !important;
+              gap: ${theme.spacing.sm} !important;
+            }
+            .salary-header button {
+              width: 100% !important;
+              justify-content: center !important;
+              border-radius: ${theme.radius.md} !important;
+            }
+            .salary-filter-row {
+              flex-direction: column !important;
+              align-items: stretch !important;
+            }
+            .salary-filter-row > * {
+              width: 100% !important;
+              min-width: 100% !important;
+              margin-left: 0 !important;
+            }
+          }
+        `}</style>
+        <div>
+          <h2 style={{
+            fontSize: theme.typography.fontSizes.lg,
+            fontWeight: 'bold',
+            color: colors.textPrimary,
+            margin: 0,
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px'
+          }}>
+            Payroll Intelligence Matrix
+          </h2>
+          <p style={{
+            fontSize: '10px',
+            color: colors.textTertiary,
+            margin: 0,
+            fontWeight: 'bold',
+            textTransform: 'uppercase'
+          }}>
+            Financial Remuneration Disbursements & Statutory Compliance
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: theme.spacing.md, flexWrap: 'wrap' }}>
+          <button
+            onClick={() => setShowBulkModal(true)}
+            style={{
+              padding: `8px 20px`,
+              background: colors.white,
+              color: colors.textPrimary,
+              border: `1px solid ${colors.border}`,
+              borderRadius: theme.radius.sm,
+              fontWeight: 'bold',
+              fontSize: '9px',
+              textTransform: 'uppercase',
+              cursor: 'pointer'
+            }}
+          >
+            Bulk Generation
+          </button>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            style={{
+              padding: `8px 20px`,
+              background: colors.sidebarBg,
+              color: colors.white,
+              border: 'none',
+              borderRadius: theme.radius.sm,
+              fontWeight: 'bold',
+              fontSize: '9px',
+              textTransform: 'uppercase',
+              cursor: 'pointer'
+            }}
+          >
+            Individual Disbursement
+          </button>
         </div>
       </div>
-      {/* Export All as PDF button */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
-        <button onClick={handleExportAllBulkPDFs} disabled={filteredSalaries.length === 0 || bulkPdfLoading} style={{ background: colors.accent, color: '#fff', border: 'none', borderRadius: 6, padding: '8px 18px', fontWeight: 700, cursor: filteredSalaries.length === 0 ? 'not-allowed' : 'pointer', opacity: bulkPdfLoading ? 0.7 : 1 }}>
-          {bulkPdfLoading ? 'Exporting...' : 'Export All as PDF'}
+
+      <div style={{ display: 'flex', gap: theme.spacing.md, marginBottom: theme.spacing.xl, alignItems: 'center', flexWrap: 'wrap' }} className="salary-filter-row">
+        <div style={{ position: 'relative', flex: '1', minWidth: '200px' }}>
+          <FaSearch style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '10px', color: colors.textTertiary }} />
+          <input
+            type="text"
+            placeholder="Search staff..."
+            value={filterEmployeeName}
+            onChange={handleEmployeeFilter}
+            style={{
+              padding: '8px 10px 8px 30px',
+              borderRadius: theme.radius.sm,
+              border: `1px solid ${colors.border}`,
+              fontSize: theme.typography.fontSizes.xs,
+              background: colors.white,
+              color: colors.textPrimary,
+              width: '100%',
+              outline: 'none'
+            }}
+          />
+        </div>
+        <select
+          value={filterMonth}
+          onChange={handleMonthFilter}
+          style={{
+            padding: theme.spacing.sm,
+            borderRadius: theme.radius.sm,
+            border: `1px solid ${colors.border}`,
+            fontSize: theme.typography.fontSizes.xs,
+            background: colors.white,
+            color: colors.textPrimary,
+            minWidth: 120,
+            outline: 'none',
+            cursor: 'pointer'
+          }}
+        >
+          <option value=''>All Months</option>
+          {monthNames.slice(1).map((m, idx) => <option key={idx + 1} value={idx + 1}>{m}</option>)}
+        </select>
+        <select
+          value={filterYear}
+          onChange={handleYearFilter}
+          style={{
+            padding: theme.spacing.sm,
+            borderRadius: theme.radius.sm,
+            border: `1px solid ${colors.border}`,
+            fontSize: theme.typography.fontSizes.xs,
+            background: colors.white,
+            color: colors.textPrimary,
+            minWidth: 100,
+            outline: 'none',
+            cursor: 'pointer'
+          }}
+        >
+          <option value=''>All Years</option>
+          {Array.from(new Set(salaries.map(s => s.year))).sort((a, b) => a - b).map(y => <option key={y} value={y}>{y}</option>)}
+        </select>
+        <button
+          onClick={handleExportAllBulkPDFs}
+          disabled={filteredSalaries.length === 0 || bulkPdfLoading}
+          style={{
+            marginLeft: 'auto',
+            padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
+            background: '#059669',
+            color: colors.white,
+            border: 'none',
+            borderRadius: theme.radius.sm,
+            fontWeight: theme.typography.fontWeights.bold,
+            fontSize: theme.typography.fontSizes.xs,
+            textTransform: 'uppercase',
+            cursor: filteredSalaries.length === 0 ? 'not-allowed' : 'pointer',
+            opacity: bulkPdfLoading ? 0.7 : 1
+          }}
+        >
+          {bulkPdfLoading ? 'Processing...' : 'Export PDF Manifest'}
         </button>
       </div>
       {/* Salary Table */}
-      <div className="responsive-table" style={{ borderRadius: 12, background: colors.accentLight, boxShadow: colors.cardShadow }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900, background: colors.cardBg }}>
-          <thead>
-            <tr style={{ background: colors.accentLight }}>
-              <th style={{ padding: 12, borderBottom: `1px solid ${colors.border}` }}>Employee</th>
-              <th style={{ padding: 12, borderBottom: `1px solid ${colors.border}` }}>Month</th>
-              <th style={{ padding: 12, borderBottom: `1px solid ${colors.border}` }}>Year</th>
-              <th style={{ padding: 12, borderBottom: `1px solid ${colors.border}` }}>Working Days</th>
-              <th style={{ padding: 12, borderBottom: `1px solid ${colors.border}` }}>Total Days</th>
-              <th style={{ padding: 12, borderBottom: `1px solid ${colors.border}` }}>Salary</th>
-              <th style={{ padding: 12, borderBottom: `1px solid ${colors.border}` }}>Additional</th>
-              <th style={{ padding: 12, borderBottom: `1px solid ${colors.border}` }}>Reason</th>
-              <th style={{ padding: 12, borderBottom: `1px solid ${colors.border}` }}>Total</th>
-              <th style={{ padding: 12, borderBottom: `1px solid ${colors.border}` }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
+      <div style={{
+        background: colors.white,
+        borderRadius: theme.radius.lg,
+        border: `1px solid ${colors.borderLight}`,
+        overflow: 'hidden',
+        boxShadow: theme.shadows.md,
+      }}>
+        <div style={{ 
+          overflowX: 'auto',
+          WebkitOverflowScrolling: 'touch'
+        }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '900px' }}>
+              <thead style={{ background: colors.tableHeaderBg }}>
+                <tr>
+                  {['Staff Member', 'Period', 'Days', 'Salary', 'Additional', 'Reason', 'Total Net', 'Actions'].map((header, idx) => (
+                    <th key={header} style={{
+                      padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
+                      textAlign: 'left',
+                      fontWeight: 'bold',
+                      fontSize: '9px',
+                      color: colors.textPrimary,
+                      textTransform: 'uppercase',
+                      letterSpacing: '1px',
+                      borderBottom: `2px solid ${colors.border}`,
+                      borderRight: idx < 7 ? `1px solid ${colors.border}` : 'none'
+                    }}>{header}</th>
+                  ))}
+                </tr>
+              </thead>
+            <tbody>
             {salaryLoading ? (
-              <tr><td colSpan={10} style={{ textAlign: 'center', padding: 24, color: colors.muted }}>Loading...</td></tr>
+              <tr><td colSpan={8} style={{ textAlign: 'center', padding: theme.spacing.xl, color: colors.textTertiary, fontSize: theme.typography.fontSizes.xs }}>Loading payroll records...</td></tr>
             ) : filteredSalaries.length === 0 ? (
-              <tr><td colSpan={10} style={{ textAlign: 'center', padding: 24, color: colors.muted }}>No salary records found.</td></tr>
+              <tr><td colSpan={8} style={{ textAlign: 'center', padding: theme.spacing.xl, color: colors.textTertiary, fontSize: theme.typography.fontSizes.xs }}>No records matching current filters.</td></tr>
             ) : filteredSalaries.map(sal => (
-              <tr key={sal._id}>
-                <td style={{ padding: 10, borderBottom: `1px solid ${colors.border}`, cursor: 'pointer', color: colors.accent, fontWeight: 600 }} onClick={() => handleShowHistory(sal.employee)}>{sal.employee?.Name}</td>
-                <td style={{ padding: 10, borderBottom: `1px solid ${colors.border}` }}>{monthNames[sal.month]}</td>
-                <td style={{ padding: 10, borderBottom: `1px solid ${colors.border}` }}>{sal.year}</td>
-                <td style={{ padding: 10, borderBottom: `1px solid ${colors.border}` }}>{sal.presentDays}</td>
-                <td style={{ padding: 10, borderBottom: `1px solid ${colors.border}` }}>30</td>
-                <td style={{ padding: 10, borderBottom: `1px solid ${colors.border}` }}>{sal.salaryAmount}</td>
-                <td style={{ padding: 10, borderBottom: `1px solid ${colors.border}` }}>{sal.additionalAmount || 0}</td>
-                <td style={{ padding: 10, borderBottom: `1px solid ${colors.border}` }}>{sal.additionalAmountReason || ''}</td>
-                <td style={{ padding: 10, borderBottom: `1px solid ${colors.border}` }}>{Math.round((sal.salaryAmount || 0) + (sal.additionalAmount || 0))}</td>
-                <td style={{ padding: 10, borderBottom: `1px solid ${colors.border}`, position: 'relative' }} onClick={(e) => e.stopPropagation()}>
+              <tr key={sal._id} style={{ borderBottom: `1px solid ${colors.borderLight}` }}>
+                <td style={{ padding: theme.spacing.md, fontSize: theme.typography.fontSizes.sm, fontWeight: 'bold', color: colors.textPrimary, cursor: 'pointer' }} onClick={() => handleShowHistory(sal.employee)}>
+                  {sal.employee?.Name}
+                </td>
+                <td style={{ padding: theme.spacing.md, fontSize: theme.typography.fontSizes.xs, color: colors.textSecondary }}>
+                  {monthNames[sal.month]} {sal.year}
+                </td>
+                <td style={{ padding: theme.spacing.md, fontSize: theme.typography.fontSizes.xs, color: colors.textSecondary, fontWeight: 'bold' }}>
+                  {sal.presentDays} / 30
+                </td>
+                <td style={{ padding: theme.spacing.md, fontSize: theme.typography.fontSizes.xs, color: colors.textSecondary, fontFamily: 'monospace' }}>
+                  {sal.salaryAmount.toLocaleString()}
+                </td>
+                <td style={{ padding: theme.spacing.md, fontSize: theme.typography.fontSizes.xs, color: colors.textSecondary, fontFamily: 'monospace' }}>
+                  {sal.additionalAmount || 0}
+                </td>
+                <td style={{ padding: theme.spacing.md, fontSize: theme.typography.fontSizes.xs, color: colors.textTertiary }}>
+                  {sal.additionalAmountReason || '-'}
+                </td>
+                <td style={{ padding: theme.spacing.md, fontSize: theme.typography.fontSizes.xs, fontWeight: 'bold', color: colors.success, fontFamily: 'monospace' }}>
+                  {Math.round((sal.salaryAmount || 0) + (sal.additionalAmount || 0)).toLocaleString()}
+                </td>
+                <td style={{ padding: theme.spacing.md, position: 'relative' }} onClick={(e) => e.stopPropagation()}>
                   <div style={{ position: 'relative', display: 'inline-block' }} data-menu-container>
                     <button
                       onClick={(e) => {
@@ -932,18 +1101,12 @@ function SalaryPage({ salaries, employees, colors, refreshSalaries }) {
                         border: 'none',
                         cursor: 'pointer',
                         padding: '4px 8px',
-                        borderRadius: theme.radius.sm,
-                        fontSize: '18px',
-                        color: colors.text || colors.textPrimary || '#333',
+                        borderRadius: 0,
+                        fontSize: '16px',
+                        color: colors.textPrimary,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = colors.primaryBg || colors.accentLight || 'rgba(0,0,0,0.1)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = 'transparent';
                       }}
                     >
                       <FaEllipsisV />
@@ -954,12 +1117,12 @@ function SalaryPage({ salaries, employees, colors, refreshSalaries }) {
                           position: 'absolute',
                           top: '100%',
                           right: 0,
-                          background: colors.white || '#fff',
-                          border: `1px solid ${colors.border || '#ddd'}`,
-                          borderRadius: theme.radius.md || '8px',
-                          boxShadow: theme.shadows.md || '0 4px 12px rgba(0,0,0,0.15)',
+                          background: colors.white,
+                          border: `2px solid ${colors.sidebarBg}`,
+                          borderRadius: 0,
+                          boxShadow: theme.shadows.md,
                           zIndex: 1000,
-                          minWidth: '150px',
+                          minWidth: '160px',
                           marginTop: '4px',
                         }}
                         onClick={(e) => e.stopPropagation()}
@@ -971,26 +1134,24 @@ function SalaryPage({ salaries, employees, colors, refreshSalaries }) {
                             setOpenMenuId(null);
                           }}
                           style={{
-                            padding: `${theme.spacing.sm || '8px'} ${theme.spacing.md || '16px'}`,
+                            padding: `${theme.spacing.sm} ${theme.spacing.md}`,
                             cursor: pdfLoading === sal._id ? 'not-allowed' : 'pointer',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: theme.spacing.sm || '8px',
-                            color: colors.accent || colors.primary || '#333',
-                            borderBottom: `1px solid ${colors.borderLight || colors.border || '#eee'}`,
+                            gap: theme.spacing.sm,
+                            color: colors.textPrimary,
+                            borderBottom: `1px solid ${colors.borderLight}`,
                             opacity: pdfLoading === sal._id ? 0.7 : 1,
                           }}
                           onMouseEnter={(e) => {
-                            if (pdfLoading !== sal._id) {
-                              e.currentTarget.style.backgroundColor = colors.primaryBg || colors.accentLight || 'rgba(0,0,0,0.05)';
-                            }
+                            if (pdfLoading !== sal._id) e.currentTarget.style.backgroundColor = colors.primaryBg;
                           }}
                           onMouseLeave={(e) => {
                             e.currentTarget.style.backgroundColor = 'transparent';
                           }}
                         >
                           <FaFilePdf style={{ fontSize: '14px' }} />
-                          <span>Export PDF</span>
+                          <span style={{ fontSize: theme.typography.fontSizes.xs, fontWeight: 'bold' }}>Export Slip</span>
                         </div>
                         <div
                           onClick={(e) => {
@@ -999,25 +1160,23 @@ function SalaryPage({ salaries, employees, colors, refreshSalaries }) {
                             setOpenMenuId(null);
                           }}
                           style={{
-                            padding: `${theme.spacing.sm || '8px'} ${theme.spacing.md || '16px'}`,
+                            padding: `${theme.spacing.sm} ${theme.spacing.md}`,
                             cursor: deleteLoading === sal._id ? 'not-allowed' : 'pointer',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: theme.spacing.sm || '8px',
-                            color: colors.error || colors.dangerDark || '#dc2626',
+                            gap: theme.spacing.sm,
+                            color: colors.error,
                             opacity: deleteLoading === sal._id ? 0.7 : 1,
                           }}
                           onMouseEnter={(e) => {
-                            if (deleteLoading !== sal._id) {
-                              e.currentTarget.style.backgroundColor = colors.errorLight || 'rgba(220, 38, 38, 0.1)';
-                            }
+                            if (deleteLoading !== sal._id) e.currentTarget.style.backgroundColor = colors.errorBg;
                           }}
                           onMouseLeave={(e) => {
                             e.currentTarget.style.backgroundColor = 'transparent';
                           }}
                         >
                           <FaTrash style={{ fontSize: '14px' }} />
-                          <span>Delete</span>
+                          <span style={{ fontSize: theme.typography.fontSizes.xs, fontWeight: 'bold' }}>Delete Entry</span>
                         </div>
                       </div>
                     )}
@@ -1027,142 +1186,147 @@ function SalaryPage({ salaries, employees, colors, refreshSalaries }) {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
       {/* Modals (to be implemented next) */}
       {/* Create Salary Modal */}
       {showCreateModal && (
-        <div className="modal" style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <form onSubmit={handleCreateSalary} style={{ background: '#fff', borderRadius: 14, padding: 32, minWidth: 340, boxShadow: '0 2px 24px #23294633', display: 'flex', flexDirection: 'column', gap: 18 }}>
-            <h3 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: colors.text }}>Create Salary</h3>
-            <label style={{ fontWeight: 600 }}>Employee
-              <select name="employee" value={createForm.employee} onChange={handleCreateFormChange} required style={{ width: '100%', padding: 8, borderRadius: 6, border: `1px solid ${colors.border}` }}>
-                <option value=''>Select Employee</option>
-                {employees.map(emp => (
-                  <option key={emp._id} value={emp._id}>{emp.Name}</option>
-                ))}
-              </select>
-            </label>
-            <label style={{ fontWeight: 600 }}>Working Days
-              <input name="workingDays" type="number" min="0" max="30" value={createForm.workingDays} onChange={handleCreateFormChange} required style={{ width: '100%', padding: 8, borderRadius: 6, border: `1px solid ${colors.border}` }} />
-            </label>
-            <div style={{ fontWeight: 600, marginBottom: 8 }}>Total Days: <span style={{ fontWeight: 800 }}>30</span></div>
-            <label style={{ fontWeight: 600 }}>Additional Amount (optional)
-              <input name="additionalAmount" type="number" min="0" value={createForm.additionalAmount} onChange={handleCreateFormChange} style={{ width: '100%', padding: 8, borderRadius: 6, border: `1px solid ${colors.border}` }} />
-            </label>
-            <label style={{ fontWeight: 600 }}>Reason
-              <select name="additionalAmountReason" value={createForm.additionalAmountReason} onChange={handleCreateFormChange} style={{ width: '100%', padding: 8, borderRadius: 6, border: `1px solid ${colors.border}` }}>
-                <option value=''>Select Reason</option>
-                <option value='Commission'>Commission</option>
-                <option value='Overtime'>Overtime</option>
-                <option value='Other'>Other</option>
-              </select>
-            </label>
-            {createForm.additionalAmountReason === 'Other' && (
-              <label style={{ fontWeight: 600 }}>Custom Reason
-                <input name="customAdditionalReason" value={createForm.customAdditionalReason} onChange={handleCreateFormChange} style={{ width: '100%', padding: 8, borderRadius: 6, border: `1px solid ${colors.border}` }} />
-              </label>
-            )}
-            <div style={{ display: 'flex', gap: 12 }}>
-              <div style={{ flex: 1 }}>
-                <label style={{ fontWeight: 600 }}>Month
-                  <select name="month" value={createForm.month} onChange={handleCreateFormChange} style={{ width: '100%', padding: 8, borderRadius: 6, border: `1px solid ${colors.border}` }}>
-                    {monthNames.slice(1).map((m, idx) => <option key={idx+1} value={idx+1}>{m}</option>)}
-                  </select>
-                </label>
-              </div>
-              <div style={{ flex: 1 }}>
-                <label style={{ fontWeight: 600 }}>Year
-                  <select name="year" value={createForm.year} onChange={handleCreateFormChange} style={{ width: '100%', padding: 8, borderRadius: 6, border: `1px solid ${colors.border}` }}>
-                    {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
-                  </select>
-                </label>
-              </div>
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: theme.spacing.md }}>
+          <div style={{ background: colors.white, borderRadius: theme.radius.lg, width: '95%', maxWidth: 450, boxShadow: theme.shadows.xl, border: `2px solid ${colors.sidebarBg}`, overflow: 'hidden', maxHeight: '95vh', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ background: colors.sidebarBg, padding: `${theme.spacing.sm} ${theme.spacing.lg}`, color: colors.white, fontWeight: 'bold', fontSize: theme.typography.fontSizes.xs, textTransform: 'uppercase', letterSpacing: '1px', borderBottom: `2px solid ${colors.sidebarActive}` }}>
+              Register Payroll Record
             </div>
-            {createError && <div style={{ color: colors.dangerDark, fontWeight: 600 }}>{createError}</div>}
-            <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
-              <button type="button" onClick={closeModals} style={{ flex: 1, background: colors.muted, color: '#fff', border: 'none', borderRadius: 6, padding: '10px 0', fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
-              <button type="submit" disabled={createLoading} style={{ flex: 1, background: colors.accent, color: '#fff', border: 'none', borderRadius: 6, padding: '10px 0', fontWeight: 700, cursor: 'pointer', opacity: createLoading ? 0.7 : 1 }}>{createLoading ? 'Creating...' : 'Create'}</button>
-            </div>
-          </form>
+            <form onSubmit={handleCreateSalary} style={{ padding: theme.spacing.xl, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: theme.spacing.md, overflowY: 'auto' }}>
+              <div style={{ gridColumn: 'span 2' }}>
+                <label style={{ display: 'block', fontSize: '10px', fontWeight: 'bold', color: colors.textSecondary, marginBottom: '4px', textTransform: 'uppercase' }}>Employee Target</label>
+                <select name="employee" value={createForm.employee} onChange={handleCreateFormChange} required style={{ width: '100%', padding: theme.spacing.sm, borderRadius: 0, border: `1px solid ${colors.border}`, fontSize: theme.typography.fontSizes.xs, background: colors.white, outline: 'none', cursor: 'pointer' }}>
+                  <option value=''>Select staff member...</option>
+                  {employees.map(emp => <option key={emp._id} value={emp._id}>{emp.Name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '10px', fontWeight: 'bold', color: colors.textSecondary, marginBottom: '4px', textTransform: 'uppercase' }}>Active Days (Max 30)</label>
+                <input name="workingDays" type="number" min="0" max="30" value={createForm.workingDays} onChange={handleCreateFormChange} required style={{ width: '100%', padding: theme.spacing.sm, borderRadius: 0, border: `1px solid ${colors.border}`, fontSize: theme.typography.fontSizes.xs, background: colors.white, outline: 'none' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '10px', fontWeight: 'bold', color: colors.textSecondary, marginBottom: '4px', textTransform: 'uppercase' }}>Additional (PKR)</label>
+                <input name="additionalAmount" type="number" min="0" value={createForm.additionalAmount} onChange={handleCreateFormChange} style={{ width: '100%', padding: theme.spacing.sm, borderRadius: 0, border: `1px solid ${colors.border}`, fontSize: theme.typography.fontSizes.xs, background: colors.white, outline: 'none' }} />
+              </div>
+              <div style={{ gridColumn: 'span 2' }}>
+                <label style={{ display: 'block', fontSize: '10px', fontWeight: 'bold', color: colors.textSecondary, marginBottom: '4px', textTransform: 'uppercase' }}>Reason for Increment</label>
+                <select name="additionalAmountReason" value={createForm.additionalAmountReason} onChange={handleCreateFormChange} style={{ width: '100%', padding: theme.spacing.sm, borderRadius: 0, border: `1px solid ${colors.border}`, fontSize: theme.typography.fontSizes.xs, background: colors.white, outline: 'none', cursor: 'pointer' }}>
+                  <option value=''>Standard Salary Only</option>
+                  <option value='Commission'>Sales Commission</option>
+                  <option value='Overtime'>Overtime Compensation</option>
+                  <option value='Bonus'>Performance Bonus</option>
+                  <option value='Other'>Other Reason</option>
+                </select>
+              </div>
+              {createForm.additionalAmountReason === 'Other' && (
+                <div style={{ gridColumn: 'span 2' }}>
+                  <label style={{ display: 'block', fontSize: '10px', fontWeight: 'bold', color: colors.textSecondary, marginBottom: '4px', textTransform: 'uppercase' }}>Custom Description</label>
+                  <input name="customAdditionalReason" value={createForm.customAdditionalReason} onChange={handleCreateFormChange} style={{ width: '100%', padding: theme.spacing.sm, borderRadius: 0, border: `1px solid ${colors.border}`, fontSize: theme.typography.fontSizes.xs, background: colors.white, outline: 'none' }} />
+                </div>
+              )}
+              <div>
+                <label style={{ display: 'block', fontSize: '10px', fontWeight: 'bold', color: colors.textSecondary, marginBottom: '4px', textTransform: 'uppercase' }}>Report Month</label>
+                <select name="month" value={createForm.month} onChange={handleCreateFormChange} style={{ width: '100%', padding: theme.spacing.sm, borderRadius: 0, border: `1px solid ${colors.border}`, fontSize: theme.typography.fontSizes.xs, background: colors.white, outline: 'none' }}>
+                  {monthNames.slice(1).map((m, idx) => <option key={idx + 1} value={idx + 1}>{m}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '10px', fontWeight: 'bold', color: colors.textSecondary, marginBottom: '4px', textTransform: 'uppercase' }}>Report Year</label>
+                <select name="year" value={createForm.year} onChange={handleCreateFormChange} style={{ width: '100%', padding: theme.spacing.sm, borderRadius: 0, border: `1px solid ${colors.border}`, fontSize: theme.typography.fontSizes.xs, background: colors.white, outline: 'none' }}>
+                  {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
+                </select>
+              </div>
+              {createError && <div style={{ gridColumn: 'span 2', padding: theme.spacing.sm, background: colors.errorBg, color: colors.error, fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase' }}>{createError}</div>}
+              <div style={{ gridColumn: 'span 2', display: 'flex', justifyContent: 'flex-end', gap: theme.spacing.md, marginTop: theme.spacing.md }}>
+                <button type="button" onClick={closeModals} style={{ padding: `${theme.spacing.sm} ${theme.spacing.xl}`, background: colors.white, color: colors.textSecondary, border: `1px solid ${colors.border}`, borderRadius: 0, fontWeight: 'bold', fontSize: theme.typography.fontSizes['2xs'], textTransform: 'uppercase', cursor: 'pointer' }}>Cancel</button>
+                <button type="submit" disabled={createLoading} style={{ padding: `${theme.spacing.sm} ${theme.spacing.xl}`, background: colors.sidebarBg, color: colors.white, border: 'none', borderRadius: 0, fontWeight: 'bold', fontSize: theme.typography.fontSizes['2xs'], textTransform: 'uppercase', cursor: createLoading ? 'not-allowed' : 'pointer' }}>{createLoading ? 'Confirming...' : 'Authorize'}</button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
       {/* Bulk Salary Modal */}
       {showBulkModal && (
-        <div className="modal" style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <form onSubmit={handleBulkSalary} style={{ background: '#fff', borderRadius: 14, padding: 32, minWidth: 400, maxWidth: 600, boxShadow: '0 2px 24px #23294633', display: 'flex', flexDirection: 'column', gap: 18 }}>
-            <h3 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: colors.text }}>Bulk Salary Creation</h3>
-            <div style={{ fontWeight: 600, marginBottom: 8 }}>Total Days: <span style={{ fontWeight: 800 }}>30</span></div>
-            <div style={{ display: 'flex', gap: 12 }}>
-              <div style={{ flex: 1 }}>
-                <label style={{ fontWeight: 600 }}>Month
-                  <select name="month" value={bulkForm.month} onChange={handleBulkFormChange} style={{ width: '100%', padding: 8, borderRadius: 6, border: `1px solid ${colors.border}` }}>
-                    {monthNames.slice(1).map((m, idx) => <option key={idx+1} value={idx+1}>{m}</option>)}
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: theme.spacing.md }}>
+          <div style={{ background: colors.white, borderRadius: theme.radius.lg, width: '95%', maxWidth: 500, boxShadow: theme.shadows.xl, border: `2px solid ${colors.sidebarBg}`, overflow: 'hidden', maxHeight: '95vh', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ background: colors.sidebarBg, padding: `${theme.spacing.sm} ${theme.spacing.lg}`, color: colors.white, fontWeight: 'bold', fontSize: theme.typography.fontSizes.xs, textTransform: 'uppercase', letterSpacing: '1px', borderBottom: `2px solid ${colors.sidebarActive}` }}>
+              Bulk Payroll Dispatch
+            </div>
+            <form onSubmit={handleBulkSalary} style={{ padding: theme.spacing.xl, overflowY: 'auto' }}>
+              <div style={{ display: 'flex', gap: theme.spacing.md, marginBottom: theme.spacing.lg }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: '10px', fontWeight: 'bold', color: colors.textSecondary, marginBottom: '4px', textTransform: 'uppercase' }}>Target Month</label>
+                  <select name="month" value={bulkForm.month} onChange={handleBulkFormChange} style={{ width: '100%', padding: theme.spacing.sm, borderRadius: 0, border: `1px solid ${colors.border}`, fontSize: theme.typography.fontSizes.xs, background: colors.white, outline: 'none' }}>
+                    {monthNames.slice(1).map((m, idx) => <option key={idx + 1} value={idx + 1}>{m}</option>)}
                   </select>
-                </label>
-              </div>
-              <div style={{ flex: 1 }}>
-                <label style={{ fontWeight: 600 }}>Year
-                  <select name="year" value={bulkForm.year} onChange={handleBulkFormChange} style={{ width: '100%', padding: 8, borderRadius: 6, border: `1px solid ${colors.border}` }}>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: '10px', fontWeight: 'bold', color: colors.textSecondary, marginBottom: '4px', textTransform: 'uppercase' }}>Target Year</label>
+                  <select name="year" value={bulkForm.year} onChange={handleBulkFormChange} style={{ width: '100%', padding: theme.spacing.sm, borderRadius: 0, border: `1px solid ${colors.border}`, fontSize: theme.typography.fontSizes.xs, background: colors.white, outline: 'none' }}>
                     {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
                   </select>
-                </label>
-              </div>
-            </div>
-            <div style={{ maxHeight: 200, overflowY: 'auto', border: `1px solid ${colors.border}`, borderRadius: 8, padding: 8, background: '#f4f6fb' }}>
-              <div style={{ fontWeight: 700, marginBottom: 6 }}>Working Days for Each Employee</div>
-              {employees.map(emp => (
-                <div key={emp._id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                  <span style={{ minWidth: 120 }}>{emp.Name}</span>
-                  <input type="number" min="0" max="30" value={bulkForm.workingDays[emp._id] || ''} onChange={e => handleBulkPresentDaysChange(emp._id, e.target.value)} style={{ width: 80, padding: 6, borderRadius: 6, border: `1px solid ${colors.border}` }} placeholder="Working Days" required />
                 </div>
-              ))}
-            </div>
-            {bulkError && <div style={{ color: colors.dangerDark, fontWeight: 600 }}>{bulkError}</div>}
-            <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
-              <button type="button" onClick={closeModals} style={{ flex: 1, background: colors.muted, color: '#fff', border: 'none', borderRadius: 6, padding: '10px 0', fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
-              <button type="submit" disabled={bulkLoading} style={{ flex: 1, background: colors.accent, color: '#fff', border: 'none', borderRadius: 6, padding: '10px 0', fontWeight: 700, cursor: 'pointer', opacity: bulkLoading ? 0.7 : 1 }}>{bulkLoading ? 'Creating...' : 'Create All'}</button>
-            </div>
-          </form>
+              </div>
+              <div style={{ maxHeight: 300, overflowY: 'auto', border: `1px solid ${colors.borderLight}`, background: colors.sidebarBg, padding: theme.spacing.sm, display: 'grid', gridTemplateColumns: '1fr 80px', gap: '4px' }}>
+                <div style={{ padding: '4px', color: colors.white, fontSize: '9px', fontWeight: 'bold', textTransform: 'uppercase' }}>Staff Member</div>
+                <div style={{ padding: '4px', color: colors.white, fontSize: '9px', fontWeight: 'bold', textTransform: 'uppercase', textAlign: 'center' }}>Days</div>
+                {employees.map(emp => (
+                  <React.Fragment key={emp._id}>
+                    <div style={{ padding: '8px', background: colors.white, color: colors.textPrimary, fontSize: theme.typography.fontSizes.xs }}>{emp.Name}</div>
+                    <input type="number" min="0" max="30" value={bulkForm.workingDays[emp._id] || ''} onChange={e => handleBulkPresentDaysChange(emp._id, e.target.value)} style={{ padding: '4px', textAlign: 'center', border: 'none', background: colors.white, fontSize: theme.typography.fontSizes.xs, outline: 'none' }} required />
+                  </React.Fragment>
+                ))}
+              </div>
+              {bulkError && <div style={{ marginTop: theme.spacing.md, padding: theme.spacing.sm, background: colors.errorBg, color: colors.error, fontSize: '10px', fontWeight: 'bold' }}>{bulkError}</div>}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: theme.spacing.md, marginTop: theme.spacing.xl }}>
+                <button type="button" onClick={closeModals} style={{ padding: `${theme.spacing.sm} ${theme.spacing.xl}`, background: colors.white, color: colors.textSecondary, border: `1px solid ${colors.border}`, borderRadius: 0, fontWeight: 'bold', fontSize: theme.typography.fontSizes['2xs'], textTransform: 'uppercase', cursor: 'pointer' }}>Discard</button>
+                <button type="submit" disabled={bulkLoading} style={{ padding: `${theme.spacing.sm} ${theme.spacing.xl}`, background: colors.sidebarBg, color: colors.white, border: 'none', borderRadius: 0, fontWeight: 'bold', fontSize: theme.typography.fontSizes['2xs'], textTransform: 'uppercase', cursor: bulkLoading ? 'not-allowed' : 'pointer' }}>{bulkLoading ? 'Processing...' : 'Authorize All'}</button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
       {/* Salary History Modal */}
       {showHistoryModal && selectedEmployee && (
-        <div className="modal" style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ background: '#fff', borderRadius: 14, padding: 32, minWidth: 340, maxWidth: 600, boxShadow: '0 2px 24px #23294633', display: 'flex', flexDirection: 'column', gap: 18 }}>
-            <h3 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: colors.text }}>Salary History: {selectedEmployee.Name}</h3>
-            <div style={{ maxHeight: 300, overflowY: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', background: colors.cardBg }}>
-                <thead>
-                  <tr style={{ background: colors.accentLight }}>
-                    <th style={{ padding: 8, borderBottom: `1px solid ${colors.border}` }}>Month</th>
-                    <th style={{ padding: 8, borderBottom: `1px solid ${colors.border}` }}>Year</th>
-                    <th style={{ padding: 8, borderBottom: `1px solid ${colors.border}` }}>Working</th>
-                    <th style={{ padding: 8, borderBottom: `1px solid ${colors.border}` }}>Total</th>
-                    <th style={{ padding: 8, borderBottom: `1px solid ${colors.border}` }}>Salary</th>
-                    <th style={{ padding: 8, borderBottom: `1px solid ${colors.border}` }}>Additional</th>
-                    <th style={{ padding: 8, borderBottom: `1px solid ${colors.border}` }}>Reason</th>
-                    <th style={{ padding: 8, borderBottom: `1px solid ${colors.border}` }}>Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {employeeSalaryHistory.length === 0 ? (
-                    <tr><td colSpan={8} style={{ textAlign: 'center', padding: 18, color: colors.muted }}>No records.</td></tr>
-                  ) : employeeSalaryHistory.map(sal => (
-                    <tr key={sal._id}>
-                      <td style={{ padding: 8, borderBottom: `1px solid ${colors.border}` }}>{monthNames[sal.month]}</td>
-                      <td style={{ padding: 8, borderBottom: `1px solid ${colors.border}` }}>{sal.year}</td>
-                      <td style={{ padding: 8, borderBottom: `1px solid ${colors.border}` }}>{sal.presentDays}</td>
-                      <td style={{ padding: 8, borderBottom: `1px solid ${colors.border}` }}>30</td>
-                      <td style={{ padding: 8, borderBottom: `1px solid ${colors.border}` }}>{sal.salaryAmount}</td>
-                      <td style={{ padding: 8, borderBottom: `1px solid ${colors.border}` }}>{sal.additionalAmount || 0}</td>
-                      <td style={{ padding: 8, borderBottom: `1px solid ${colors.border}` }}>{sal.additionalAmountReason || ''}</td>
-                      <td style={{ padding: 8, borderBottom: `1px solid ${colors.border}` }}>{Math.round((sal.salaryAmount || 0) + (sal.additionalAmount || 0))}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: theme.spacing.md }}>
+          <div style={{ background: colors.white, borderRadius: theme.radius.lg, width: '95%', maxWidth: 700, boxShadow: theme.shadows.xl, border: `2px solid ${colors.sidebarBg}`, overflow: 'hidden', maxHeight: '95vh', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ background: colors.sidebarBg, padding: `${theme.spacing.sm} ${theme.spacing.lg}`, color: colors.white, fontWeight: 'bold', fontSize: theme.typography.fontSizes.xs, textTransform: 'uppercase', letterSpacing: '1px', borderBottom: `2px solid ${colors.sidebarActive}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>Historical Log: {selectedEmployee.Name}</span>
+              <button onClick={closeModals} style={{ background: 'transparent', border: 'none', color: colors.white, cursor: 'pointer', fontSize: '18px' }}><FaTimes /></button>
             </div>
-            <button onClick={closeModals} style={{ background: colors.accent, color: '#fff', border: 'none', borderRadius: 6, padding: '10px 0', fontWeight: 700, cursor: 'pointer', marginTop: 8 }}>Close</button>
+            <div style={{ padding: theme.spacing.xl }}>
+              <div style={{ maxHeight: 400, overflowY: 'auto', border: `1px solid ${colors.borderLight}` }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead style={{ background: colors.primaryBg }}>
+                    <tr>
+                      {['Period', 'Base', 'Extra', 'Reason', 'Net'].map(h => (
+                        <th key={h} style={{ padding: theme.spacing.sm, textAlign: 'left', fontSize: '9px', fontWeight: 'bold', textTransform: 'uppercase', color: colors.textSecondary }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {employeeSalaryHistory.length === 0 ? (
+                      <tr><td colSpan={5} style={{ textAlign: 'center', padding: theme.spacing.xl, color: colors.textTertiary, fontSize: theme.typography.fontSizes.xs }}>No records on file.</td></tr>
+                    ) : employeeSalaryHistory.map(sal => (
+                      <tr key={sal._id} style={{ borderBottom: `1px solid ${colors.borderLight}` }}>
+                        <td style={{ padding: theme.spacing.sm, fontSize: theme.typography.fontSizes.xs }}>{monthNames[sal.month]} {sal.year}</td>
+                        <td style={{ padding: theme.spacing.sm, fontSize: theme.typography.fontSizes.xs, fontFamily: 'monospace' }}>{sal.salaryAmount.toLocaleString()}</td>
+                        <td style={{ padding: theme.spacing.sm, fontSize: theme.typography.fontSizes.xs, fontFamily: 'monospace' }}>{sal.additionalAmount || 0}</td>
+                        <td style={{ padding: theme.spacing.sm, fontSize: theme.typography.fontSizes.xs, color: colors.textTertiary }}>{sal.additionalAmountReason || '-'}</td>
+                        <td style={{ padding: theme.spacing.sm, fontSize: theme.typography.fontSizes.xs, fontWeight: 'bold', color: colors.success, fontFamily: 'monospace' }}>{(sal.salaryAmount + (sal.additionalAmount || 0)).toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: theme.spacing.xl }}>
+                <button onClick={closeModals} style={{ padding: `${theme.spacing.sm} ${theme.spacing.xl}`, background: colors.sidebarBg, color: colors.white, border: 'none', borderRadius: 0, fontWeight: 'bold', fontSize: theme.typography.fontSizes['2xs'], textTransform: 'uppercase', cursor: 'pointer' }}>Close Record</button>
+              </div>
+            </div>
           </div>
         </div>
       )}

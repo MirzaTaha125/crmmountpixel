@@ -16,7 +16,10 @@ const paymentLinkSchema = new mongoose.Schema({
   brand: { type: String, trim: true, enum: ['Webdevelopers Inc', 'American Design Eagle', 'Mount Pixels', ''], default: '' },
   paidAt: { type: Date },
   createdAt: { type: Date, default: Date.now },
-  expiresAt: { type: Date, default: () => new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) }
+  expiresAt: { type: Date, default: () => new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) },
+  paypalInvoiceId: { type: String, default: null },
+  paypalInvoiceUrl: { type: String, default: null },
+  paypalInvoiceStatus: { type: String, default: null } // DRAFT | SENT | PAID | CANCELLED | REFUNDED
 });
 
 paymentLinkSchema.methods.isExpired = function() {

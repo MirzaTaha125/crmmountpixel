@@ -42,7 +42,7 @@ const UsersPage = ({ colors: colorsProp }) => {
     try {
       const res = await axios.get(`${API_URL}/api/users`, { headers: getAuthHeaders() });
       setUsers(res.data || []);
-    } catch (err) {
+    } catch {
       setError('Failed to fetch users');
       setUsers([]);
     } finally {
@@ -283,26 +283,32 @@ const UsersPage = ({ colors: colorsProp }) => {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: theme.spacing.xl,
-        flexWrap: 'wrap',
-        gap: theme.spacing.md,
+        marginBottom: theme.spacing.lg,
+        background: colors.white,
+        padding: theme.spacing.md,
+        borderRadius: theme.radius.lg,
+        border: `1px solid ${colors.borderLight}`,
+        boxShadow: theme.shadows.sm,
       }}>
         <div>
           <h2 style={{
-            fontSize: theme.typography.fontSizes['3xl'],
-            fontWeight: theme.typography.fontWeights.bold,
+            fontSize: theme.typography.fontSizes.lg,
+            fontWeight: 'bold',
             color: colors.textPrimary,
             margin: 0,
-            marginBottom: theme.spacing.xs,
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px'
           }}>
-            Users
+            User Management Matrix
           </h2>
           <p style={{
-            fontSize: theme.typography.fontSizes.base,
-            color: colors.textSecondary,
+            fontSize: '10px',
+            color: colors.textTertiary,
             margin: 0,
+            fontWeight: 'bold',
+            textTransform: 'uppercase'
           }}>
-            {filteredUsers.length} {filteredUsers.length === 1 ? 'user' : 'users'}
+            Security Personnel & Administrative Access Control
           </p>
         </div>
         <button
@@ -311,30 +317,20 @@ const UsersPage = ({ colors: colorsProp }) => {
             display: 'flex',
             alignItems: 'center',
             gap: theme.spacing.sm,
-            padding: `${theme.spacing.md} ${theme.spacing.xl}`,
-            background: colors.primary,
+            padding: `8px 20px`,
+            background: colors.sidebarBg,
             color: colors.white,
             border: 'none',
             borderRadius: theme.radius.md,
-            fontWeight: theme.typography.fontWeights.semibold,
-            fontSize: theme.typography.fontSizes.base,
+            fontWeight: 'bold',
+            fontSize: '9px',
+            textTransform: 'uppercase',
             cursor: 'pointer',
             boxShadow: theme.shadows.sm,
-            transition: `all ${theme.transitions.normal}`,
-          }}
-          onMouseEnter={(e) => {
-            e.target.style.background = colors.primaryDark;
-            e.target.style.transform = 'translateY(-1px)';
-            e.target.style.boxShadow = theme.shadows.md;
-          }}
-          onMouseLeave={(e) => {
-            e.target.style.background = colors.primary;
-            e.target.style.transform = 'translateY(0)';
-            e.target.style.boxShadow = theme.shadows.sm;
           }}
         >
           <FaPlus />
-          Add User
+          Provision Identity
         </button>
       </div>
 
@@ -346,8 +342,9 @@ const UsersPage = ({ colors: colorsProp }) => {
           color: colors.error,
           borderRadius: theme.radius.md,
           marginBottom: theme.spacing.lg,
-          border: `1px solid ${colors.error}`,
-          fontSize: theme.typography.fontSizes.sm,
+          borderLeft: `4px solid ${colors.error}`,
+          fontSize: theme.typography.fontSizes.xs,
+          fontWeight: theme.typography.fontWeights.bold
         }}>
           {error}
         </div>
@@ -374,12 +371,13 @@ const UsersPage = ({ colors: colorsProp }) => {
           onChange={e => setSearchTerm(e.target.value)}
           style={{
             width: '100%',
-            padding: `${theme.spacing.sm} ${theme.spacing.md} ${theme.spacing.sm} ${theme.spacing['2xl']}`,
+            padding: `${theme.spacing.sm} ${theme.spacing.md} ${theme.spacing.sm} ${theme.spacing.xl}`,
             borderRadius: theme.radius.md,
             border: `1px solid ${colors.border}`,
-            fontSize: theme.typography.fontSizes.base,
+            fontSize: theme.typography.fontSizes.xs,
             color: colors.textPrimary,
             background: colors.white,
+            outline: 'none'
           }}
         />
       </div>
@@ -413,45 +411,33 @@ const UsersPage = ({ colors: colorsProp }) => {
       ) : (
         <div style={{
           background: colors.white,
-          borderRadius: theme.radius.xl,
+          borderRadius: theme.radius.lg,
           border: `1px solid ${colors.borderLight}`,
           overflow: 'hidden',
-          boxShadow: theme.shadows.sm,
+          boxShadow: theme.shadows.md,
         }}>
           <div style={{ overflowX: 'auto' }}>
             <table style={{
               width: '100%',
               borderCollapse: 'collapse',
             }}>
-              <thead style={{
-                background: colors.primaryBg,
-                borderBottom: `1px solid ${colors.border}`,
-              }}>
+              <thead style={{ background: colors.tableHeaderBg }}>
                 <tr>
-                  {['Name', 'Email', 'Role', 'Actions'].map(header => (
+                  {['Name', 'Email', 'Role', 'Status', 'Security'].map((header, idx) => (
                     <th key={header} style={{
-                      padding: theme.spacing.md,
+                      padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
                       textAlign: 'left',
-                      fontWeight: theme.typography.fontWeights.semibold,
-                      fontSize: theme.typography.fontSizes.sm,
-                      color: colors.textSecondary,
+                      fontWeight: 'bold',
+                      fontSize: '9px',
+                      color: colors.textPrimary,
                       textTransform: 'uppercase',
-                      letterSpacing: '0.05em',
+                      letterSpacing: '1px',
+                      borderBottom: `2px solid ${colors.border}`,
+                      borderRight: idx < 4 ? `1px solid ${colors.border}` : 'none'
                     }}>
                       {header}
                     </th>
                   ))}
-                  <th style={{
-                    padding: theme.spacing.md,
-                    textAlign: 'left',
-                    fontWeight: theme.typography.fontWeights.semibold,
-                    fontSize: theme.typography.fontSizes.sm,
-                    color: colors.textSecondary,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                  }}>
-                    2FA
-                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -471,35 +457,41 @@ const UsersPage = ({ colors: colorsProp }) => {
                   >
                     <td style={{
                       padding: theme.spacing.md,
-                      fontWeight: theme.typography.fontWeights.semibold,
+                      fontWeight: theme.typography.fontWeights.bold,
+                      fontSize: theme.typography.fontSizes.sm,
                       color: colors.textPrimary,
                     }}>
                       {user.First_Name} {user.Last_Name}
                     </td>
-                    <td style={{ padding: theme.spacing.md, color: colors.textSecondary }}>
+                    <td style={{ padding: theme.spacing.md, fontSize: theme.typography.fontSizes.xs, color: colors.textSecondary }}>
                       {user.Email}
                     </td>
                     <td style={{ padding: theme.spacing.md }}>
                       <span style={{
                         display: 'inline-block',
-                        padding: `${theme.spacing.xs} ${theme.spacing.md}`,
+                        padding: `2px 10px`,
                         borderRadius: theme.radius.full,
-                        fontSize: theme.typography.fontSizes.xs,
-                        fontWeight: theme.typography.fontWeights.medium,
-                        background: user.Role === 'Admin' ? colors.primaryBg :
-                                   user.Role === 'Front' ? '#f3e5f5' :
-                                   user.Role === 'Upsell' ? colors.successLight :
-                                   user.Role === 'Production' ? colors.warningLight : colors.hover,
-                        color: 'black',
+                        fontSize: theme.typography.fontSizes['2xs'],
+                        fontWeight: theme.typography.fontWeights.bold,
+                        background: user.Role === 'Admin' ? colors.sidebarBg :
+                                   user.Role === 'Front' ? colors.primaryBg :
+                                   user.Role === 'Upsell' ? colors.successBg :
+                                   user.Role === 'Production' ? colors.warningBg : colors.hover,
+                        color: user.Role === 'Admin' ? colors.sidebarTextActive : colors.textPrimary,
+                        textTransform: 'uppercase'
                       }}>
                         {user.Role}
                       </span>
                     </td>
                     <td style={{ padding: theme.spacing.md }}>
                       {user.twoFactorEnabled ? (
-                        <FaShieldAlt style={{ color: colors.success, fontSize: '18px' }} title="2FA Enabled" />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: colors.success, fontSize: theme.typography.fontSizes['2xs'], fontWeight: 'bold' }}>
+                          <FaShieldAlt /> ENABLED
+                        </div>
                       ) : (
-                        <FaUnlock style={{ color: colors.textTertiary, fontSize: '18px' }} title="2FA Disabled" />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: colors.textTertiary, fontSize: theme.typography.fontSizes['2xs'], fontWeight: 'bold' }}>
+                          <FaUnlock /> DISABLED
+                        </div>
                       )}
                     </td>
                     <td style={{ padding: theme.spacing.md, position: 'relative' }} onClick={(e) => e.stopPropagation()}>
@@ -514,8 +506,8 @@ const UsersPage = ({ colors: colorsProp }) => {
                             border: 'none',
                             cursor: 'pointer',
                             padding: '4px 8px',
-                            borderRadius: theme.radius.sm,
-                            fontSize: '18px',
+                            borderRadius: 0,
+                            fontSize: '16px',
                             color: colors.textPrimary,
                             display: 'flex',
                             alignItems: 'center',
@@ -537,11 +529,11 @@ const UsersPage = ({ colors: colorsProp }) => {
                               top: '100%',
                               right: 0,
                               background: colors.white,
-                              border: `1px solid ${colors.border}`,
-                              borderRadius: theme.radius.md,
+                              border: `2px solid ${colors.sidebarBg}`,
+                              borderRadius: 0,
                               boxShadow: theme.shadows.md,
                               zIndex: 1000,
-                              minWidth: '150px',
+                              minWidth: '160px',
                               marginTop: '4px',
                             }}
                             onClick={(e) => e.stopPropagation()}
@@ -654,13 +646,14 @@ const UsersPage = ({ colors: colorsProp }) => {
         >
           <div style={{
             background: colors.white,
-            borderRadius: theme.radius['2xl'],
+            borderRadius: theme.radius.xl,
             boxShadow: theme.shadows.xl,
             width: '100%',
             maxWidth: '600px',
             maxHeight: '90vh',
             overflow: 'auto',
             zIndex: theme.zIndex.modal,
+            border: `1px solid ${colors.border}`
           }}
           onClick={(e) => e.stopPropagation()}
           >
@@ -1116,13 +1109,14 @@ const UsersPage = ({ colors: colorsProp }) => {
         }}>
           <div style={{
             background: colors.white,
-            borderRadius: theme.radius['2xl'],
+            borderRadius: 0,
             boxShadow: theme.shadows.xl,
             width: '100%',
             maxWidth: '550px',
             maxHeight: '90vh',
             overflow: 'auto',
             padding: theme.spacing.xl,
+            border: `1px solid ${colors.border}`
           }}>
             <div style={{
               display: 'flex',

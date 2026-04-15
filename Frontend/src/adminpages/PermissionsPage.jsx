@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import getApiBaseUrl from '../apiBase';
-import { FaEdit, FaSave, FaTimes, FaUser, FaShieldAlt, FaCheck, FaSearch, FaSpinner } from 'react-icons/fa';
+import { FaEdit, FaSave, FaTimes, FaUser, FaShieldAlt, FaCheck, FaSearch, FaSpinner, FaLock, FaUserShield } from 'react-icons/fa';
 import { theme, getColors } from '../theme';
-import { Button } from '../components/Button';
-import { Modal } from '../components/Modal';
 import { usePermissions } from '../contexts/PermissionContext';
 
 const API_URL = getApiBaseUrl();
@@ -18,14 +16,8 @@ function PermissionsPage({ colors: propColors }) {
   const [operationLoading, setOperationLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-
-  // Search and filter states
   const [userSearch, setUserSearch] = useState('');
-
-  // User permissions state - stores permissions for each user
   const [userPermissions, setUserPermissions] = useState({});
-  
-  // Permission editing states
   const [editingUser, setEditingUser] = useState(null);
   const [selectedPermissions, setSelectedPermissions] = useState({}); 
 
@@ -33,69 +25,32 @@ function PermissionsPage({ colors: propColors }) {
     fetchData();
   }, []);
 
-  // Auto-dismiss messages after 5 seconds
-  useEffect(() => {
-    if (error) {
-      const timer = setTimeout(() => setError(''), 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [error]);
-
-  useEffect(() => {
-    if (success) {
-      const timer = setTimeout(() => setSuccess(''), 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [success]);
-
   const fetchData = async () => {
     setLoading(true);
-    setError('');
     try {
       const token = localStorage.getItem('token');
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
-
-      // Fetch all permissions
-      const permissionsRes = await axios.get(`${API_URL}/api/permissions`, { headers }).catch(err => {
-        console.error('Error fetching permissions:', err);
-        return { data: { permissions: [] } };
-      });
+      const permissionsRes = await axios.get(`${API_URL}/api/permissions`, { headers });
       const allPermissions = permissionsRes.data?.permissions || [];
       setPermissions(allPermissions);
-
-      // Fetch users
-      const usersRes = await axios.get(`${API_URL}/api/users`, { headers }).catch(err => {
-        console.error('Error fetching users:', err);
-        return { data: [] };
-      });
+      const usersRes = await axios.get(`${API_URL}/api/users`, { headers });
       const usersList = usersRes.data || [];
       setUsers(usersList);
-
-      // Fetch permissions for each user (excluding Admins)
-      const userPermsPromises = usersList
-        .filter(user => user.Role !== 'Admin')
-        .map(async (user) => {
-          try {
-            const res = await axios.get(`${API_URL}/api/permissions/user/${user._id}`, { headers });
-            return { userId: user._id, permissions: res.data?.permissions || [] };
-          } catch (err) {
-            console.error(`Error fetching permissions for user ${user._id}:`, err);
-            return { userId: user._id, permissions: [] };
-          }
-        });
-      
+      const userPermsPromises = usersList.filter(u => u.Role !== 'Admin').map(async (u) => {
+        try {
+          const res = await axios.get(`${API_URL}/api/permissions/user/${u._id}`, { headers });
+          return { userId: u._id, permissions: res.data?.permissions || [] };
+        } catch { return { userId: u._id, permissions: [] }; }
+      });
       const userPermsResults = await Promise.all(userPermsPromises);
       const userPermsMap = {};
       userPermsResults.forEach(({ userId, permissions: perms }) => {
         userPermsMap[userId] = {};
-        perms.forEach(perm => {
-          userPermsMap[userId][perm.name] = perm.granted || false;
-        });
+        perms.forEach(p => { userPermsMap[userId][p.name] = p.granted || false; });
       });
       setUserPermissions(userPermsMap);
-    } catch (err) {
-      console.error('Error fetching data:', err);
-      setError(err.response?.data?.message || 'Failed to fetch data. Please check your connection and try again.');
+    } catch {
+      setError('Communication with security layer failed');
     } finally {
       setLoading(false);
     }
@@ -103,573 +58,246 @@ function PermissionsPage({ colors: propColors }) {
 
   const handleEditPermissions = (user) => {
     setEditingUser(user);
-    // Initialize selected permissions with current user permissions
     const currentPerms = userPermissions[user._id] || {};
     const permsMap = {};
-    permissions.forEach(perm => {
-      permsMap[perm.name] = currentPerms[perm.name] || false;
-    });
+    permissions.forEach(perm => { permsMap[perm.name] = currentPerms[perm.name] || false; });
     setSelectedPermissions(permsMap);
-    setError('');
-    setSuccess('');
   };
 
   const handleSavePermissions = async () => {
     if (!editingUser) return;
-    
+    setOperationLoading(true);
     try {
-      setOperationLoading(true);
-      setError('');
-      setSuccess('');
-      
       const token = localStorage.getItem('token');
-      const headers = {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      };
-
-      // Convert selectedPermissions to array format
-      const permissionsArray = Object.entries(selectedPermissions).map(([permissionName, granted]) => ({
-        permissionName,
-        granted
-      }));
-
-      await axios.put(`${API_URL}/api/permissions/user/${editingUser._id}`, {
-        permissions: permissionsArray
-      }, { headers });
-      
-      setSuccess(`Permissions for ${editingUser.First_Name} ${editingUser.Last_Name} updated successfully.`);
+      const permissionsArray = Object.entries(selectedPermissions).map(([name, granted]) => ({ permissionName: name, granted }));
+      await axios.put(`${API_URL}/api/permissions/user/${editingUser._id}`, { permissions: permissionsArray }, { headers: { Authorization: `Bearer ${token}` } });
+      setSuccess(`Permissions synchronized for ${editingUser.First_Name}`);
       setEditingUser(null);
       await fetchData();
-      
-      // Refresh permissions for the current user if they're viewing their own permissions
-      try {
-        await refreshPermissions();
-      } catch (refreshError) {
-        console.error('Error refreshing permissions:', refreshError);
-      }
-    } catch (err) {
-      console.error('Error saving permissions:', err);
-      const errorMessage = err.response?.data?.message || 'Failed to save permissions. Please try again.';
-      setError(errorMessage);
+      await refreshPermissions();
+    } catch {
+      setError('Sync operation aborted by server');
     } finally {
       setOperationLoading(false);
     }
   };
 
-  const togglePermission = (permissionName) => {
-    setSelectedPermissions(prev => ({
-      ...prev,
-      [permissionName]: !prev[permissionName]
-    }));
+  const togglePermission = (name) => {
+    setSelectedPermissions(prev => ({ ...prev, [name]: !prev[name] }));
   };
 
-  const formatPermissionName = (name) => {
-    return name
-      .split('_')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
-  };
+  const formatName = (n) => n.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 
-  const groupedPermissions = permissions.reduce((acc, permission) => {
-    if (!acc[permission.category]) {
-      acc[permission.category] = [];
-    }
-    acc[permission.category].push(permission);
+  const grouped = permissions.reduce((acc, p) => {
+    if (!acc[p.category]) acc[p.category] = [];
+    acc[p.category].push(p);
     return acc;
   }, {});
 
-  // Filter users based on search (exclude Admins from permission management)
-  const filteredUsers = users
-    .filter(user => user.Role !== 'Admin')
-    .filter(user =>
-      user.First_Name?.toLowerCase().includes(userSearch.toLowerCase()) ||
-      user.Last_Name?.toLowerCase().includes(userSearch.toLowerCase()) ||
-      user.Email?.toLowerCase().includes(userSearch.toLowerCase()) ||
-      user.Role?.toLowerCase().includes(userSearch.toLowerCase())
-    );
-
-  if (loading) {
-    return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '50vh',
-        flexDirection: 'column',
-        gap: theme.spacing.md,
-        fontFamily: theme.typography.fontFamily
-      }}>
-        <FaSpinner style={{ fontSize: '32px', color: colors.primary, animation: 'spin 1s linear infinite' }} />
-        <div style={{ color: colors.textPrimary, fontSize: theme.typography.fontSizes.base }}>Loading permissions...</div>
-      </div>
-    );
-  }
+  const filteredUsers = users.filter(u => u.Role !== 'Admin').filter(u => 
+    (u.First_Name + ' ' + u.Last_Name).toLowerCase().includes(userSearch.toLowerCase()) || u.Role?.toLowerCase().includes(userSearch.toLowerCase())
+  );
 
   return (
-    <div style={{ width: '100%', fontFamily: theme.typography.fontFamily }}>
-      <style>{`
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
-      
-      {/* Header */}
+    <div style={{ width: '100%', fontFamily: 'inherit' }}>
+      {/* HEADER ROW */}
       <div style={{
-        marginBottom: theme.spacing.xl,
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
+        marginBottom: theme.spacing.lg,
+        background: colors.white,
+        padding: theme.spacing.md,
+        borderRadius: theme.radius.lg,
+        border: `1px solid ${colors.borderLight}`,
+        boxShadow: theme.shadows.sm,
         flexWrap: 'wrap',
         gap: theme.spacing.md
-      }}>
+      }} className="permissions-header">
+        <style>{`
+          @media (max-width: 600px) {
+            .permissions-header {
+              flex-direction: column !important;
+              align-items: flex-start !important;
+            }
+            .permissions-header > div:last-child {
+              width: 100% !important;
+            }
+            .permissions-header .override-badge {
+              width: 100% !important;
+              text-align: center !important;
+            }
+            .permissions-controls {
+              grid-template-columns: 1fr !important;
+            }
+          }
+        `}</style>
         <div>
-          <h2 style={{
-            fontSize: theme.typography.fontSizes['3xl'],
-            fontWeight: theme.typography.fontWeights.bold,
-            color: colors.textPrimary,
-            margin: 0,
-            marginBottom: theme.spacing.xs,
-            display: 'flex',
-            alignItems: 'center',
-            gap: theme.spacing.md
-          }}>
-            <FaShieldAlt style={{ color: colors.primary }} />
-            User Permission Management
+          <h2 style={{ fontSize: theme.typography.fontSizes.lg, fontWeight: 'bold', color: colors.textPrimary, margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            Access Control Registry
           </h2>
-          <p style={{
-            fontSize: theme.typography.fontSizes.base,
-            color: colors.textSecondary,
-            margin: 0
-          }}>
-            Manage individual permissions for each user. Admins have all permissions by default.
+          <p style={{ fontSize: '10px', color: colors.textTertiary, margin: 0, fontWeight: 'bold', textTransform: 'uppercase' }}>
+            System-wide Permission Matrix & User Role Authority
           </p>
         </div>
+        <div style={{ display: 'flex', gap: theme.spacing.md, alignItems: 'center' }}>
+          <div style={{ fontSize: '10px', fontWeight: 'bold', border: `1px solid ${colors.sidebarBg}`, borderRadius: theme.radius.sm, padding: '4px 8px', color: colors.sidebarBg }} className="override-badge">
+            ADMINISTRATIVE OVERRIDE ACTIVE
+          </div>
+        </div>
       </div>
 
-      {/* Alerts */}
-      {error && (
-        <div style={{
-          background: colors.errorLight,
-          color: colors.error,
-          padding: `${theme.spacing.md} ${theme.spacing.lg}`,
-          borderRadius: theme.radius.md,
-          marginBottom: theme.spacing.lg,
-          display: 'flex',
-          alignItems: 'center',
-          gap: theme.spacing.md,
-          border: `1px solid ${colors.error}`
-        }}>
-          <FaTimes />
-          <span style={{ flex: 1 }}>{error}</span>
-          <button
-            onClick={() => setError('')}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: colors.error,
-              cursor: 'pointer',
-              padding: theme.spacing.xs,
-              borderRadius: theme.radius.md,
-              fontSize: theme.typography.fontSizes.base,
-              display: 'flex',
-              alignItems: 'center',
-              transition: `background ${theme.transitions.normal}`
-            }}
-            onMouseEnter={(e) => e.target.style.background = colors.hover}
-            onMouseLeave={(e) => e.target.style.background = 'none'}
-            aria-label="Close error message"
-          >
-            <FaTimes />
-          </button>
-        </div>
-      )}
-
-      {success && (
-        <div style={{
-          background: colors.successLight,
-          color: colors.success,
-          padding: `${theme.spacing.md} ${theme.spacing.lg}`,
-          borderRadius: theme.radius.md,
-          marginBottom: theme.spacing.lg,
-          display: 'flex',
-          alignItems: 'center',
-          gap: theme.spacing.md,
-          border: `1px solid ${colors.success}`
-        }}>
-          <FaCheck />
-          <span style={{ flex: 1 }}>{success}</span>
-          <button
-            onClick={() => setSuccess('')}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: colors.success,
-              cursor: 'pointer',
-              padding: theme.spacing.xs,
-              borderRadius: theme.radius.md,
-              fontSize: theme.typography.fontSizes.base,
-              display: 'flex',
-              alignItems: 'center',
-              transition: `background ${theme.transitions.normal}`
-            }}
-            onMouseEnter={(e) => e.target.style.background = colors.hover}
-            onMouseLeave={(e) => e.target.style.background = 'none'}
-            aria-label="Close success message"
-          >
-            <FaTimes />
-          </button>
-        </div>
-      )}
-
-      {/* Users Section */}
+      {/* QUICK STATS ROW */}
       <div style={{
-        background: colors.cardBg,
-        borderRadius: theme.radius['2xl'],
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+        gap: '1px',
+        borderRadius: theme.radius.lg,
+        overflow: 'hidden',
         boxShadow: theme.shadows.sm,
-        border: `1px solid ${colors.border}`,
-        padding: theme.spacing['2xl'],
-        marginBottom: theme.spacing.xl
+        background: colors.border
       }}>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: theme.spacing.xl,
-          flexWrap: 'wrap',
-          gap: theme.spacing.md
-        }}>
-          <h2 style={{ 
-            fontSize: theme.typography.fontSizes['2xl'], 
-            fontWeight: theme.typography.fontWeights.bold, 
-            color: colors.textPrimary,
-            margin: 0
-          }}>
-            Users ({filteredUsers.length})
-          </h2>
-          
-          {/* Search */}
-          <div style={{ position: 'relative', minWidth: '250px' }}>
-            <FaSearch style={{
-              position: 'absolute',
-              left: theme.spacing.md,
-              top: '50%',
-              transform: 'translateY(-50%)',
-              color: colors.textSecondary,
-              fontSize: theme.typography.fontSizes.sm
-            }} />
-            <input
-              type="text"
-              placeholder="Search users..."
-              value={userSearch}
-              onChange={(e) => setUserSearch(e.target.value)}
-              style={{
-                width: '100%',
-                padding: `${theme.spacing.sm} ${theme.spacing.md} ${theme.spacing.sm} ${theme.spacing['2xl']}`,
-                border: `1px solid ${colors.border}`,
-                borderRadius: theme.radius.md,
-                fontSize: theme.typography.fontSizes.base,
-                fontFamily: theme.typography.fontFamily,
-                background: colors.white,
-                color: colors.textPrimary,
-                outline: 'none',
-                transition: `all ${theme.transitions.normal}`
-              }}
-              onFocus={(e) => {
-                e.target.style.borderColor = colors.primary;
-                e.target.style.boxShadow = `0 0 0 3px ${colors.primaryBg}`;
-              }}
-              onBlur={(e) => {
-                e.target.style.borderColor = colors.border;
-                e.target.style.boxShadow = 'none';
-              }}
-            />
-          </div>
+        <div style={{ padding: theme.spacing.md, background: colors.tableHeaderBg }}>
+          <div style={{ fontSize: '9px', fontWeight: 'bold', color: colors.textTertiary, textTransform: 'uppercase', marginBottom: '4px' }}>Managed Identities</div>
+          <div style={{ fontSize: theme.typography.fontSizes.lg, fontWeight: 'bold', color: colors.textPrimary }}>{users.filter(u => u.Role !== 'Admin').length} SUBJECTS</div>
         </div>
-        
-        {filteredUsers.length === 0 ? (
-          <div style={{
-            textAlign: 'center',
-            padding: theme.spacing['2xl'],
-            color: colors.textSecondary
-          }}>
-            <FaUser style={{ fontSize: '48px', marginBottom: theme.spacing.md, opacity: 0.3 }} />
-            <p style={{ fontSize: theme.typography.fontSizes.base, margin: 0 }}>
-              {userSearch ? 'No users found matching your search.' : 'No users found. Admins are excluded from permission management.'}
-            </p>
-          </div>
-        ) : (
-          <div style={{ display: 'grid', gap: theme.spacing.md }}>
-            {filteredUsers.map(user => {
-              const userPerms = userPermissions[user._id] || {};
-              const grantedPermissions = Object.entries(userPerms)
-                .filter(([_, granted]) => granted)
-                .map(([name]) => name);
-              
-              return (
-                <div key={user._id} style={{
-                  border: `1px solid ${colors.border}`,
-                  borderRadius: theme.radius.lg,
-                  padding: theme.spacing.xl,
-                  background: colors.white,
-                  boxShadow: theme.shadows.sm,
-                  transition: `all ${theme.transitions.normal}`
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = theme.shadows.md;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = theme.shadows.sm;
-                }}
-                >
-                  <div style={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    alignItems: 'flex-start',
-                    marginBottom: theme.spacing.md,
-                    flexWrap: 'wrap',
-                    gap: theme.spacing.md
-                  }}>
-                    <div style={{ flex: 1, minWidth: '200px' }}>
-                      <h3 style={{ 
-                        fontSize: theme.typography.fontSizes.xl, 
-                        fontWeight: theme.typography.fontWeights.semibold, 
-                        color: colors.textPrimary, 
-                        margin: '0 0 4px 0' 
-                      }}>
-                        {user.First_Name} {user.Last_Name}
-                      </h3>
-                      <p style={{ 
-                        color: colors.textSecondary, 
-                        margin: '4px 0',
-                        fontSize: theme.typography.fontSizes.sm,
-                        lineHeight: theme.typography.lineHeights.relaxed
-                      }}>
-                        {user.Email}
-                      </p>
-                      {user.Role && (
-                        <span style={{
-                          background: colors.primaryBg,
-                          color: colors.primary,
-                          padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
-                          borderRadius: theme.radius.full,
-                          fontSize: theme.typography.fontSizes.xs,
-                          fontWeight: theme.typography.fontWeights.semibold,
-                          display: 'inline-block',
-                          marginTop: theme.spacing.xs
-                        }}>
-                          {user.Role}
-                        </span>
-                      )}
-                    </div>
-                    <div style={{ display: 'flex', gap: theme.spacing.sm, flexWrap: 'wrap' }}>
-                      <Button
-                        onClick={() => handleEditPermissions(user)}
-                        disabled={operationLoading}
-                        variant="primary"
-                        style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.xs }}
-                      >
-                        <FaEdit />
-                        Edit Permissions
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <h4 style={{ 
-                      fontSize: theme.typography.fontSizes.sm, 
-                      fontWeight: theme.typography.fontWeights.semibold, 
-                      color: colors.textPrimary, 
-                      margin: '0 0 8px 0' 
-                    }}>
-                      Permissions ({grantedPermissions.length} granted)
-                    </h4>
-                    {grantedPermissions.length > 0 ? (
-                      <div style={{ 
-                        display: 'flex', 
-                        flexWrap: 'wrap', 
-                        gap: theme.spacing.xs 
-                      }}>
-                        {grantedPermissions.slice(0, 10).map(permission => (
-                          <span key={permission} style={{
-                            background: colors.primary,
-                            color: 'white',
-                            padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
-                            borderRadius: theme.radius.md,
-                            fontSize: theme.typography.fontSizes.xs,
-                            fontWeight: theme.typography.fontWeights.medium
-                          }}>
-                            {formatPermissionName(permission)}
-                          </span>
-                        ))}
-                        {grantedPermissions.length > 10 && (
-                          <span style={{
-                            background: colors.border,
-                            color: colors.textSecondary,
-                            padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
-                            borderRadius: theme.radius.md,
-                            fontSize: theme.typography.fontSizes.xs,
-                            fontWeight: theme.typography.fontWeights.medium
-                          }}>
-                            +{grantedPermissions.length - 10} more
-                          </span>
-                        )}
-                      </div>
-                    ) : (
-                      <p style={{ color: colors.textSecondary, fontSize: theme.typography.fontSizes.sm, margin: 0 }}>
-                        No permissions granted yet
-                      </p>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+        <div style={{ padding: theme.spacing.md, background: colors.white }}>
+          <div style={{ fontSize: '9px', fontWeight: 'bold', color: colors.textTertiary, textTransform: 'uppercase', marginBottom: '4px' }}>Permission Vectors</div>
+          <div style={{ fontSize: theme.typography.fontSizes.lg, fontWeight: 'bold', color: colors.sidebarBg }}>{permissions.length} OBJECTS</div>
+        </div>
+        <div style={{ padding: theme.spacing.md, background: colors.white }}>
+          <div style={{ fontSize: '9px', fontWeight: 'bold', color: colors.textTertiary, textTransform: 'uppercase', marginBottom: '4px' }}>Security State</div>
+          <div style={{ fontSize: theme.typography.fontSizes.lg, fontWeight: 'bold', color: '#10b981' }}>PROTECTED</div>
+        </div>
       </div>
 
-      {/* Permissions Editing Modal */}
-      <Modal
-        open={!!editingUser}
-        onClose={() => !operationLoading && setEditingUser(null)}
-        title={editingUser ? `Edit Permissions for ${editingUser.First_Name} ${editingUser.Last_Name}` : 'Edit Permissions'}
-        maxWidth="800px"
-        footer={
-          <div style={{ display: 'flex', gap: theme.spacing.md, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-            <Button
-              onClick={() => !operationLoading && setEditingUser(null)}
-              disabled={operationLoading}
-              variant="secondary"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSavePermissions}
-              disabled={operationLoading}
-              variant="primary"
-            >
-              {operationLoading ? (
-                <>
-                  <FaSpinner style={{ animation: 'spin 1s linear infinite' }} />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <FaSave />
-                  Save Permissions
-                </>
-              )}
-            </Button>
+      {/* CONTROL GRID */}
+      <div style={{ 
+        background: colors.white, 
+        padding: theme.spacing.lg, 
+        marginBottom: theme.spacing.lg,
+        borderRadius: theme.radius.md,
+        border: `1px solid ${colors.borderLight}`,
+        boxShadow: theme.shadows.sm,
+      }} className="permissions-controls">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: theme.spacing.md }}>
+          <div style={{ position: 'relative' }}>
+            <FaSearch style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '10px', color: colors.textTertiary }} />
+            <input type="text" placeholder="Lookup subject identity..." value={userSearch} onChange={e => setUserSearch(e.target.value)} style={{ width: '100%', padding: '8px 10px 8px 30px', border: `1px solid ${colors.border}`, borderRadius: theme.radius.md, fontSize: '11px', background: colors.white, outline: 'none' }} />
           </div>
-        }
-      >
-        {editingUser && (
-          <div style={{
-            background: colors.primaryBg,
-            padding: theme.spacing.md,
-            borderRadius: theme.radius.md,
-            marginBottom: theme.spacing.xl
-          }}>
-            <p style={{ 
-              margin: 0, 
-              fontSize: theme.typography.fontSizes.sm, 
-              color: colors.textPrimary, 
-              fontWeight: theme.typography.fontWeights.semibold 
-            }}>
-              User: {editingUser.First_Name} {editingUser.Last_Name}
-            </p>
-            <p style={{ 
-              margin: `${theme.spacing.xs} 0 0 0`, 
-              fontSize: theme.typography.fontSizes.xs, 
-              color: colors.textSecondary 
-            }}>
-              {editingUser.Email} {editingUser.Role && `• ${editingUser.Role}`}
-            </p>
-          </div>
-        )}
-        
-        <div style={{ marginBottom: theme.spacing.xl }}>
-          <label style={{ 
-            display: 'block', 
-            marginBottom: theme.spacing.md, 
-            color: colors.textPrimary, 
-            fontWeight: theme.typography.fontWeights.semibold,
-            fontSize: theme.typography.fontSizes.base
-          }}>
-            Permissions ({Object.values(selectedPermissions).filter(g => g).length} granted)
-          </label>
-          {Object.keys(groupedPermissions).length === 0 ? (
-            <p style={{ 
-              color: colors.textSecondary, 
-              fontSize: theme.typography.fontSizes.sm, 
-              padding: theme.spacing.xl, 
-              textAlign: 'center' 
-            }}>
-              No permissions available. Please ensure permissions are seeded in the database.
-            </p>
-          ) : (
-            Object.entries(groupedPermissions).map(([category, categoryPermissions]) => (
-              <div key={category} style={{ marginBottom: theme.spacing.xl }}>
-                <h4 style={{ 
-                  fontSize: theme.typography.fontSizes.base, 
-                  fontWeight: theme.typography.fontWeights.semibold, 
-                  color: colors.textPrimary, 
-                  marginBottom: theme.spacing.md,
-                  textTransform: 'capitalize'
-                }}>
-                  {category.replace(/_/g, ' ')}
-                </h4>
-                <div style={{ 
-                  display: 'grid', 
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
-                  gap: theme.spacing.sm 
-                }}>
-                  {categoryPermissions.map(permission => (
-                    <label key={permission._id} style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: theme.spacing.sm,
-                      padding: theme.spacing.md,
-                      borderRadius: theme.radius.md,
-                      cursor: 'pointer',
-                      background: selectedPermissions[permission.name] ? colors.primaryBg : 'transparent',
-                      border: `1px solid ${selectedPermissions[permission.name] ? colors.primary : colors.border}`,
-                      transition: `all ${theme.transitions.normal}`
-                    }}>
-                      <input
-                        type="checkbox"
-                        checked={selectedPermissions[permission.name] || false}
-                        onChange={() => togglePermission(permission.name)}
-                        style={{ margin: 0, cursor: 'pointer' }}
-                      />
-                      <div style={{ flex: 1 }}>
-                        <span style={{ 
-                          fontSize: theme.typography.fontSizes.sm, 
-                          color: colors.textPrimary, 
-                          fontWeight: theme.typography.fontWeights.medium 
-                        }}>
-                          {formatPermissionName(permission.name)}
-                        </span>
-                        {permission.description && (
-                          <p style={{ 
-                            fontSize: theme.typography.fontSizes.xs, 
-                            color: colors.textSecondary, 
-                            margin: `${theme.spacing.xs} 0 0 0` 
-                          }}>
-                            {permission.description}
-                          </p>
-                        )}
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            ))
-          )}
         </div>
-      </Modal>
+      </div>
+
+      {/* ALERTS */}
+      {error && <div style={{ background: colors.error, color: colors.white, padding: '10px', fontSize: '9px', fontWeight: 'bold', marginBottom: '10px' }}>ERROR: {error.toUpperCase()}</div>}
+      {success && <div style={{ background: '#10b981', color: colors.white, padding: '10px', fontSize: '9px', fontWeight: 'bold', marginBottom: '10px' }}>SUCCESS: {success.toUpperCase()}</div>}
+
+      {/* DATA GRID */}
+      <div style={{ 
+        background: colors.white, 
+        borderRadius: theme.radius.lg, 
+        border: `1px solid ${colors.borderLight}`,
+        overflow: 'hidden',
+        boxShadow: theme.shadows.md,
+      }}>
+        <div style={{ 
+          overflowX: 'auto',
+          WebkitOverflowScrolling: 'touch'
+        }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '800px' }}>
+            <thead style={{ background: colors.tableHeaderBg }}>
+              <tr>
+                {['Subject Identity', 'Department / Role', 'Access Level Summary', 'Security Control'].map((h, idx) => (
+                  <th key={idx} style={{
+                    padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
+                    textAlign: 'left',
+                    fontSize: '9px',
+                    fontWeight: 'bold',
+                    color: colors.textPrimary,
+                    textTransform: 'uppercase',
+                    letterSpacing: '1px',
+                    borderBottom: `2px solid ${colors.border}`,
+                    borderRight: idx < 3 ? `1px solid ${colors.border}` : 'none'
+                  }}>
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td colSpan={4} style={{ padding: theme.spacing['2xl'], textAlign: 'center', color: colors.textTertiary, fontSize: '10px' }}>SCANNING SECURITY CLEARANCE RECORDS...</td></tr>
+              ) : filteredUsers.length === 0 ? (
+                <tr><td colSpan={4} style={{ padding: theme.spacing['2xl'], textAlign: 'center', color: colors.textTertiary, fontSize: '10px' }}>NO SUBJECTS FOUND FOR CURRENT AUDIT.</td></tr>
+              ) : filteredUsers.map((u, idx) => {
+                const granted = Object.entries(userPermissions[u._id] || {}).filter(([_k,v])=>v).length;
+                return (
+                  <tr key={u._id} style={{ borderBottom: `1px solid ${colors.borderLight}`, background: idx % 2 === 0 ? colors.white : colors.primaryBg }}>
+                    <td style={{ padding: `${theme.spacing.md} ${theme.spacing.lg}` }}>
+                      <div style={{ fontWeight: 'bold', fontSize: '11px', color: colors.textPrimary, textTransform: 'uppercase' }}>{u.First_Name} {u.Last_Name}</div>
+                      <div style={{ fontSize: '9px', color: colors.textTertiary, fontWeight: 'bold' }}>{u.Email.toUpperCase()}</div>
+                    </td>
+                    <td style={{ padding: `${theme.spacing.md} ${theme.spacing.lg}` }}>
+                      <span style={{ padding: '3px 7px', border: `1px solid ${colors.border}`, borderRadius: theme.radius.full, fontSize: '8px', fontWeight: '800', textTransform: 'uppercase', color: colors.sidebarBg }}>{u.Role}</span>
+                    </td>
+                    <td style={{ padding: `${theme.spacing.md} ${theme.spacing.lg}` }}>
+                      <div style={{ fontSize: '10px', fontWeight: 'bold', color: colors.textPrimary }}>{granted} PRIVILEGES AUTHORIZED</div>
+                      <div style={{ fontSize: '8px', color: colors.textTertiary }}>ACCESS LEVEL: {granted > 10 ? 'HIGH' : granted > 5 ? 'MEDIUM' : 'LIMITED'}</div>
+                    </td>
+                    <td style={{ padding: `${theme.spacing.md} ${theme.spacing.lg}` }}>
+                      <button onClick={() => handleEditPermissions(u)} style={{ background: colors.sidebarBg, color: colors.white, border: 'none', padding: '6px 12px', borderRadius: theme.radius.md, fontSize: '9px', fontWeight: 'bold', textTransform: 'uppercase', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: theme.shadows.sm }}>
+                        <FaLock fontSize="10" /> Modify Access
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* ACCESS MODIFCATION MODAL */}
+      {editingUser && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: theme.spacing.md }}>
+          <div style={{ background: colors.white, borderRadius: theme.radius.xl, width: '95%', maxWidth: 900, height: '90vh', boxShadow: theme.shadows.xl, border: `1px solid ${colors.border}`, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ background: colors.tableHeaderBg, padding: `15px 25px`, color: colors.textPrimary, fontWeight: theme.typography.fontWeights.bold, fontSize: '11px', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `2px solid ${colors.border}`, borderRadius: `${theme.radius.xl} ${theme.radius.xl} 0 0` }}>
+              <span>Subject Authority Matrix: {editingUser.First_Name} {editingUser.Last_Name}</span>
+              <FaUserShield fontSize="16" />
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto', padding: theme.spacing.xl }}>
+              <div style={{ background: colors.primaryBg, padding: theme.spacing.lg, marginBottom: theme.spacing.xl, borderRadius: theme.radius.md, border: `1px solid ${colors.border}` }}>
+                <div style={{ fontSize: '9px', fontWeight: 'bold', color: colors.textTertiary, marginBottom: '4px' }}>CURRENT SECURITY CLEARANCE</div>
+                <div style={{ fontSize: '14px', fontWeight: 'bold', color: colors.sidebarBg }}>{Object.values(selectedPermissions).filter(g=>g).length} ACTIVE VECTORS</div>
+              </div>
+              {Object.entries(grouped).map(([cat, ps]) => (
+                <div key={cat} style={{ marginBottom: theme.spacing.xl }}>
+                  <div style={{ fontSize: '10px', fontWeight: '800', background: colors.tableHeaderBg, color: colors.textPrimary, padding: '10px 15px', textTransform: 'uppercase', marginBottom: '10px', letterSpacing: '1px', borderLeft: `4px solid ${colors.sidebarBg}`, borderBottom: `1px solid ${colors.border}` }}>{cat.replace(/_/g, ' ')} LAYER</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1px', background: colors.border, border: `1px solid ${colors.border}`, borderRadius: theme.radius.md, overflow: 'hidden' }}>
+                    {ps.map(p => (
+                      <div key={p.name} onClick={() => togglePermission(p.name)} style={{ background: selectedPermissions[p.name] ? colors.primaryBg : colors.white, padding: '12px', cursor: 'pointer', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                        <div style={{ width: '14px', height: '14px', border: `2px solid ${colors.sidebarBg}`, borderRadius: '3px', background: selectedPermissions[p.name] ? colors.sidebarBg : 'none', marginTop: '2px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          {selectedPermissions[p.name] && <FaCheck fontSize="8" color="#fff" />}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '10px', fontWeight: 'bold', color: colors.textPrimary, textTransform: 'uppercase' }}>{formatName(p.name)}</div>
+                          <div style={{ fontSize: '8px', color: colors.textTertiary, marginTop: '2px' }}>{p.description || 'No system descriptor provided.'}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{ padding: theme.spacing.lg, background: colors.primaryBg, borderTop: `1px solid ${colors.border}`, display: 'flex', justifyContent: 'flex-end', gap: theme.spacing.md, flexWrap: 'wrap' }}>
+              <button onClick={() => setEditingUser(null)} style={{ padding: '10px 24px', background: 'none', border: `1px solid ${colors.border}`, borderRadius: theme.radius.md, fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', cursor: 'pointer', flex: '1', minWidth: '150px' }}>Discard Changes</button>
+              <button onClick={handleSavePermissions} disabled={operationLoading} style={{ padding: '10px 24px', background: colors.sidebarBg, color: colors.white, border: 'none', borderRadius: theme.radius.md, fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', cursor: 'pointer', boxShadow: theme.shadows.sm, flex: '1', minWidth: '150px' }}>
+                {operationLoading ? 'Syncing Layers...' : 'Commit Authority Matrix'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

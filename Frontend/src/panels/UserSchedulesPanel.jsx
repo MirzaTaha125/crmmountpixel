@@ -43,7 +43,7 @@ export default function UserSchedulesPanel({ colors, user }) {
     try {
       const res = await axios.get(`${API_URL}/api/call-schedules/my-schedules`, { headers: getAuthHeaders() });
       setSchedules(res.data || []);
-    } catch (err) {
+    } catch {
       setSchedulesError('Failed to fetch schedules');
     } finally {
       setSchedulesLoading(false);
@@ -124,7 +124,7 @@ export default function UserSchedulesPanel({ colors, user }) {
     try {
       await axios.delete(`${API_URL}/api/call-schedules/${id}`, { headers: getAuthHeaders() });
       fetchSchedules();
-    } catch (err) {
+    } catch {
       alert('Failed to delete schedule');
     }
   };

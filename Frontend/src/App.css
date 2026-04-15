@@ -162,6 +162,8 @@ button, input, select, textarea {
   min-height: 44px;
 }
 
+/* Legacy Sidebar Styles Removed to support Sharp Professional Design */
+/* 
 .sidebar {
   width: 240px;
   background: linear-gradient(160deg, #232946 60%, #4f8cff 100%);
@@ -174,47 +176,8 @@ button, input, select, textarea {
   border-top-right-radius: 24px;
   border-bottom-right-radius: 24px;
 }
-
-@media (min-width: 901px) {
-  .sidebar {
-    position: sticky !important;
-    top: 0 !important;
-    height: 100vh !important;
-    align-self: flex-start !important;
-    max-height: 100vh !important;
-  }
-}
-.sidebar-logo {
-  font-size: 28px;
-  font-weight: 900;
-  margin-bottom: 44px;
-  letter-spacing: 1px;
-  color: #fff;
-  text-shadow: 0 2px 8px #23294633;
-}
-.sidebar nav ul {
-  list-style: none;
-  padding: 0;
-  width: 100%;
-}
-.sidebar nav ul li {
-  padding: 14px 36px;
-  font-weight: 700;
-  border-radius: 12px;
-  margin-bottom: 14px;
-  cursor: pointer;
-  color: #b8c1ec;
-  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.sidebar nav ul li.active,
-.sidebar nav ul li:hover {
-  background: #fff;
-  color: #2563eb;
-  box-shadow: 0 2px 8px #4f8cff22;
-}
+... 
+*/
 .sidebar-icon {
   font-size: 20px;
   display: inline-block;

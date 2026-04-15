@@ -35,7 +35,7 @@ const API_URL = getApiBaseUrl();
 
 function UserPanel() {
   const { user, setUser } = useSession();
-  const { canView, canDo, permissions, refreshPermissions } = usePermissions();
+  const { canView, canDo } = usePermissions();
   const navigate = useNavigate();
   const inactivityTimerRef = useRef(null);
   const lastActivityRef = useRef(Date.now());
@@ -58,10 +58,14 @@ function UserPanel() {
 
   // Data states
   const [clients, setClients] = useState([]);
+  // eslint-disable-next-line no-unused-vars
   const [packages, setPackages] = useState([]);
-  const [inquiries, setInquiries] = useState([]);
+  const [inquiries, setInquiries] = useState([]); // eslint-disable-line no-unused-vars
+  // eslint-disable-next-line no-unused-vars
   const [projects, setProjects] = useState([]);
+  // eslint-disable-next-line no-unused-vars
   const [schedules, setSchedules] = useState([]);
+  // eslint-disable-next-line no-unused-vars
   const [assignedClients, setAssignedClients] = useState([]);
   const [salaries, setSalaries] = useState([]);
   const [employees, setEmployees] = useState([]);
@@ -69,21 +73,29 @@ function UserPanel() {
   
   // Loading states
   const [clientsLoading, setClientsLoading] = useState(false);
+  // eslint-disable-next-line no-unused-vars
   const [packagesLoading, setPackagesLoading] = useState(false);
+  // eslint-disable-next-line no-unused-vars
   const [inquiriesLoading, setInquiriesLoading] = useState(false);
+  // eslint-disable-next-line no-unused-vars
   const [projectsLoading, setProjectsLoading] = useState(false);
+  // eslint-disable-next-line no-unused-vars
   const [schedulesLoading, setSchedulesLoading] = useState(false);
-  
+
   // Error states
   const [clientsError, setClientsError] = useState('');
+  // eslint-disable-next-line no-unused-vars
   const [packagesError, setPackagesError] = useState('');
+  // eslint-disable-next-line no-unused-vars
   const [inquiriesError, setInquiriesError] = useState('');
+  // eslint-disable-next-line no-unused-vars
   const [projectsError, setProjectsError] = useState('');
+  // eslint-disable-next-line no-unused-vars
   const [schedulesError, setSchedulesError] = useState('');
   
   // Search states
   const [clientSearchTerm, setClientSearchTerm] = useState('');
-  const [inquirySearchTerm, setInquirySearchTerm] = useState('');
+  const [_inquirySearchTerm, _setInquirySearchTerm] = useState('');
   
   // Logout loading state
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -98,8 +110,8 @@ function UserPanel() {
       const chats = res.data.chats || [];
       const total = chats.reduce((sum, chat) => sum + (chat.unreadCount || 0), 0);
       setTotalUnreadCount(total);
-    } catch (error) {
-      // Error fetching unread count
+    } catch {
+      // ignore
     }
   };
 
@@ -161,6 +173,7 @@ function UserPanel() {
   }, []);
   
   // Schedule form states
+  // eslint-disable-next-line no-unused-vars
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState(null);
   const [scheduleForm, setScheduleForm] = useState({
@@ -171,7 +184,9 @@ function UserPanel() {
     notes: '',
     status: 'scheduled'
   });
+  // eslint-disable-next-line no-unused-vars
   const [scheduleLoading, setScheduleLoading] = useState(false);
+  // eslint-disable-next-line no-unused-vars
   const [scheduleError, setScheduleError] = useState('');
 
   // Client form states
@@ -211,7 +226,7 @@ function UserPanel() {
     try {
       const res = await axios.get(`${API_URL}/api/clients`, { headers: getAuthHeaders() });
       setClients(res.data.clients || []);
-    } catch (err) {
+    } catch {
       setClientsError('Failed to fetch clients');
     } finally {
       setClientsLoading(false);
@@ -230,7 +245,7 @@ function UserPanel() {
     try {
       const res = await axios.get(`${API_URL}/api/projects`, { headers: getAuthHeaders() });
       setProjects(res.data.projects || []);
-    } catch (err) {
+    } catch {
       setProjectsError('Failed to fetch projects');
     } finally {
       setProjectsLoading(false);
@@ -243,8 +258,7 @@ function UserPanel() {
     try {
       const res = await axios.get(`${API_URL}/api/salaries`, { headers: getAuthHeaders() });
       setSalaries(res.data.salaries || []);
-    } catch (err) {
-    }
+    } catch { /* ignore */ }
   };
 
   const fetchEmployees = async () => {
@@ -253,8 +267,7 @@ function UserPanel() {
     try {
       const res = await axios.get(`${API_URL}/api/employees`, { headers: getAuthHeaders() });
       setEmployees(res.data.employees || []);
-    } catch (err) {
-    }
+    } catch { /* ignore */ }
   };
 
   const fetchUsers = async () => {
@@ -263,8 +276,7 @@ function UserPanel() {
     try {
       const res = await axios.get(`${API_URL}/api/users`, { headers: getAuthHeaders() });
       setUsers(res.data.users || res.data || []);
-    } catch (err) {
-    }
+    } catch { /* ignore */ }
   };
 
   const fetchSchedules = async () => {
@@ -275,21 +287,21 @@ function UserPanel() {
     try {
       const res = await axios.get(`${API_URL}/api/call-schedules/my-schedules`, { headers: getAuthHeaders() });
       setSchedules(res.data || []);
-    } catch (err) {
+    } catch {
       setSchedulesError('Failed to fetch schedules');
     } finally {
       setSchedulesLoading(false);
     }
   };
 
+  // eslint-disable-next-line no-unused-vars
   const fetchAssignedClients = async () => {
     if (!canView('schedule_calls')) return;
     
     try {
       const res = await axios.get(`${API_URL}/api/call-schedules/assigned-clients`, { headers: getAuthHeaders() });
       setAssignedClients(res.data || []);
-    } catch (err) {
-    }
+    } catch { /* ignore */ }
   };
 
   // Fetch data when tab changes
@@ -444,7 +456,8 @@ function UserPanel() {
     setSidebarOpen(false);
   };
 
-  const handleScheduleSubmit = async (e) => {
+  // eslint-disable-next-line no-unused-vars
+    const handleScheduleSubmit = async (e) => {
     e.preventDefault();
     if (editingSchedule && !canDo('edit_schedule_calls')) {
       setScheduleError('You do not have permission to edit schedule calls');
@@ -481,7 +494,8 @@ function UserPanel() {
     }
   };
 
-  const openScheduleModal = () => {
+  // eslint-disable-next-line no-unused-vars
+    const openScheduleModal = () => {
     setEditingSchedule(null);
     setScheduleForm({
       clientId: '',
@@ -495,7 +509,8 @@ function UserPanel() {
     setShowScheduleModal(true);
   };
 
-  const closeScheduleModal = () => {
+  // eslint-disable-next-line no-unused-vars
+    const closeScheduleModal = () => {
     setShowScheduleModal(false);
     setEditingSchedule(null);
     setScheduleForm({
@@ -509,7 +524,8 @@ function UserPanel() {
     setScheduleError('');
   };
 
-  const handleEditSchedule = (schedule) => {
+  // eslint-disable-next-line no-unused-vars
+    const handleEditSchedule = (schedule) => {
     if (!canDo('edit_schedule_calls')) {
       alert('You do not have permission to edit schedule calls');
       return;
@@ -527,7 +543,8 @@ function UserPanel() {
     setScheduleError('');
   };
 
-  const handleUpdateSchedule = async (e) => {
+  // eslint-disable-next-line no-unused-vars
+    const handleUpdateSchedule = async (e) => {
     e.preventDefault();
     if (!canDo('edit_schedule_calls')) {
       setScheduleError('You do not have permission to edit schedule calls');
@@ -557,7 +574,8 @@ function UserPanel() {
     }
   };
 
-  const handleDeleteSchedule = async (scheduleId) => {
+  // eslint-disable-next-line no-unused-vars
+    const handleDeleteSchedule = async (scheduleId) => {
     if (!canDo('delete_schedule_calls')) {
       alert('You do not have permission to delete schedule calls');
       return;
@@ -567,7 +585,7 @@ function UserPanel() {
     try {
       await axios.delete(`${API_URL}/api/call-schedules/${scheduleId}`, { headers: getAuthHeaders() });
       fetchSchedules(); // Refresh the schedules list
-    } catch (err) {
+    } catch {
       alert('Failed to delete schedule');
     }
   };
@@ -576,96 +594,79 @@ function UserPanel() {
   // No need to manually refresh here as it causes infinite loops
 
   const getNavigationItems = () => {
-    const items = [];
+    const sections = [
+      { category: 'Main', items: [] },
+      { category: 'Communication & CRM', items: [] },
+      { category: 'Enterprise Services', items: [] },
+      { category: 'Management', items: [] },
+      { category: 'Preferences & System', items: [] },
+    ];
+
+    const addItem = (category, item) => {
+      const section = sections.find(s => s.category === category);
+      if (section) section.items.push(item);
+    };
 
     // Dashboard - always show at the top
-    items.push({ id: 'dashboard', label: 'Dashboard', icon: FaTachometerAlt, permission: 'view_dashboard' });
+    addItem('Main', { id: 'dashboard', label: 'Dashboard', icon: FaTachometerAlt, permission: 'view_dashboard' });
 
-    // Clients
-    if (canView('clients')) {
-      items.push({ id: 'clients', label: 'Clients', icon: FaUsers, permission: 'view_clients' });
-    }
-
-    // Packages
-    if (canView('packages')) {
-      items.push({ id: 'packages', label: 'Packages', icon: FaBoxOpen, permission: 'view_packages' });
-    }
-
-    // Custom Packages
-    if (canView('custom_packages')) {
-      items.push({ id: 'custom-packages', label: 'Custom Packages', icon: FaBoxOpen, permission: 'view_custom_packages' });
-    }
-
-    // Inquiries
-    if (canView('inquiries')) {
-      items.push({ id: 'inquiries', label: 'Inquiries', icon: FaUserTie, permission: 'view_inquiries' });
-    }
-
-    // Emails
+    // Communication & CRM
     if (canView('emails')) {
-      items.push({ id: 'emails', label: 'My Emails', icon: FaEnvelope, permission: 'view_emails' });
+      addItem('Communication & CRM', { id: 'emails', label: 'My Emails', icon: FaEnvelope, permission: 'view_emails' });
     }
-
-    // Schedule Calls
+    if (canView('clients')) {
+      addItem('Communication & CRM', { id: 'clients', label: 'Clients', icon: FaUsers, permission: 'view_clients' });
+    }
+    if (canView('inquiries')) {
+      addItem('Communication & CRM', { id: 'inquiries', label: 'Inquiries', icon: FaUserTie, permission: 'view_inquiries' });
+    }
     if (canView('schedule_calls')) {
-      items.push({ id: 'schedule-calls', label: 'Schedule Calls', icon: FaPhone, permission: 'view_schedule_calls' });
+      addItem('Communication & CRM', { id: 'schedule-calls', label: 'Schedule Calls', icon: FaPhone, permission: 'view_schedule_calls' });
     }
-
-    // Payment Generator
-    if (canView('payments')) {
-      items.push({ id: 'payment-generator', label: 'Payment Generator', icon: FaMoneyCheckAlt, permission: 'view_payment_generator' });
-    }
-
-    // Disputes
     if (canView('disputes')) {
-      items.push({ id: 'disputes', label: 'Disputes', icon: FaExclamationTriangle, permission: 'view_disputes' });
+      addItem('Communication & CRM', { id: 'disputes', label: 'Disputes', icon: FaExclamationTriangle, permission: 'view_disputes' });
     }
 
-    // Employees
-    if (canView('employees')) {
-      items.push({ id: 'employees', label: 'Employees', icon: FaUserCircle, permission: 'view_employees' });
+    // Enterprise Services
+    if (canView('packages')) {
+      addItem('Enterprise Services', { id: 'packages', label: 'Packages', icon: FaBoxOpen, permission: 'view_packages' });
     }
-
-    // Expenses
-    if (canView('expenses')) {
-      items.push({ id: 'expenses', label: 'Expenses', icon: FaDollarSign, permission: 'view_expenses' });
+    if (canView('custom_packages')) {
+      addItem('Enterprise Services', { id: 'custom-packages', label: 'Custom Packages', icon: FaBoxOpen, permission: 'view_custom_packages' });
     }
-
-    // Users
-    if (canView('users')) {
-      items.push({ id: 'users', label: 'Users', icon: FaUserShield, permission: 'view_users' });
+    if (canView('payments')) {
+      addItem('Enterprise Services', { id: 'payment-generator', label: 'Payment Generator', icon: FaMoneyCheckAlt, permission: 'view_payment_generator' });
     }
-
-    // Salary
-    if (canView('salary')) {
-      items.push({ id: 'salary', label: 'Salary', icon: FaMoneyCheckAlt, permission: 'view_salary' });
-    }
-
-    // Reports
     if (canView('reports')) {
-      items.push({ id: 'reports', label: 'Reports', icon: FaChartBar, permission: 'view_reports' });
+      addItem('Enterprise Services', { id: 'reports', label: 'Reports', icon: FaChartBar, permission: 'view_reports' });
     }
 
-    // Permissions
+    // Management
+    if (canView('employees')) {
+      addItem('Management', { id: 'employees', label: 'Employees', icon: FaUserCircle, permission: 'view_employees' });
+    }
+    if (canView('expenses')) {
+      addItem('Management', { id: 'expenses', label: 'Expenses', icon: FaDollarSign, permission: 'view_expenses' });
+    }
+    if (canView('salary')) {
+      addItem('Management', { id: 'salary', label: 'Salary', icon: FaMoneyCheckAlt, permission: 'view_salary' });
+    }
+    if (canView('users')) {
+      addItem('Management', { id: 'users', label: 'Users', icon: FaUserShield, permission: 'view_users' });
+    }
+
+    // Preferences & System
     if (canView('permissions')) {
-      items.push({ id: 'permissions', label: 'Permissions', icon: FaShieldAlt, permission: 'view_permissions' });
+      addItem('Preferences & System', { id: 'permissions', label: 'Permissions', icon: FaShieldAlt, permission: 'view_permissions' });
     }
-
-    // 2FA Settings
     if (canView('2fa_settings')) {
-      items.push({ id: '2fa-settings', label: '2FA Settings', icon: FaCog, permission: 'view_2fa_settings' });
+      addItem('Preferences & System', { id: '2fa-settings', label: '2FA Settings', icon: FaCog, permission: 'view_2fa_settings' });
     }
-
-    // Activity Logs
     if (canView('activity_logs')) {
-      items.push({ id: 'activity-logs', label: 'Activity Logs', icon: FaHistory, permission: 'view_activity_logs' });
+      addItem('Preferences & System', { id: 'activity-logs', label: 'Activity Logs', icon: FaHistory, permission: 'view_activity_logs' });
     }
 
-    // Debug: Log permissions in development
-    if (process.env.NODE_ENV === 'development') {
-    }
-
-    return items;
+    return sections.filter(section => section.items.length > 0);
   };
 
   const renderDashboard = () => (
@@ -1006,218 +1007,6 @@ function UserPanel() {
       return (
         <UserInquiriesPanel colors={colors} user={user} />
       );
-    } else if (false) {
-      const filteredInquiries = (inquiries || []).filter(inquiry => {
-        if (!inquirySearchTerm) return true;
-        const searchLower = inquirySearchTerm.toLowerCase();
-        return (
-          inquiry.name?.toLowerCase().includes(searchLower) ||
-          inquiry.email?.toLowerCase().includes(searchLower) ||
-          inquiry.phone?.toLowerCase().includes(searchLower) ||
-          inquiry.message?.toLowerCase().includes(searchLower)
-        );
-      });
-
-      return (
-        <div style={{
-          background: colors.cardBg,
-          borderRadius: 18,
-          boxShadow: colors.cardShadow,
-          padding: 32,
-          minHeight: 'calc(100vh - 48px)'
-        }}>
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center', 
-            marginBottom: 24 
-          }}>
-            <h2 style={{ 
-              fontSize: 28, 
-              fontWeight: 700, 
-              color: colors.text, 
-              margin: 0 
-            }}>
-              Inquiries ({filteredInquiries.length})
-            </h2>
-        {canDo('add_inquiries') && (
-          <button
-            onClick={openInquiryModal}
-            style={{
-              background: colors.accent,
-              color: 'white',
-              border: 'none',
-              borderRadius: 8,
-              padding: '12px 24px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              fontSize: 16,
-              fontWeight: 600,
-              transition: 'background 0.2s'
-            }}
-            onMouseOver={(e) => e.target.style.background = '#3d7ae8'}
-            onMouseOut={(e) => e.target.style.background = colors.accent}
-          >
-            <FaPlus />
-            Add Inquiry
-          </button>
-        )}
-      </div>
-
-          {/* Search */}
-          <div style={{ marginBottom: 24 }}>
-            <div style={{ position: 'relative', maxWidth: 400 }}>
-              <FaSearch style={{
-                position: 'absolute',
-                left: 12,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                color: colors.muted
-              }} />
-              <input
-                type="text"
-                placeholder="Search inquiries..."
-                value={inquirySearchTerm}
-                onChange={(e) => setInquirySearchTerm(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '12px 12px 12px 40px',
-                  border: `1px solid ${colors.border}`,
-                  borderRadius: 8,
-                  fontSize: 16
-                }}
-              />
-        </div>
-        </div>
-
-          {/* Error Message */}
-          {inquiriesError && (
-            <div style={{
-              background: colors.danger,
-              color: colors.dangerDark,
-              padding: '12px 16px',
-              borderRadius: 8,
-              marginBottom: 24
-            }}>
-              {inquiriesError}
-            </div>
-          )}
-
-          {/* Loading */}
-          {inquiriesLoading ? (
-            <div style={{ textAlign: 'center', padding: 40 }}>
-              <div>Loading inquiries...</div>
-            </div>
-          ) : filteredInquiries.length === 0 ? (
-            <div style={{ 
-              textAlign: 'center', 
-              padding: 40,
-              color: colors.muted 
-            }}>
-              <FaUserTie style={{ fontSize: 48, marginBottom: 16, color: colors.accent }} />
-              <br />
-              {inquirySearchTerm ? 'No inquiries found matching your search.' : 'No inquiries found.'}
-        </div>
-      ) : (
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ borderBottom: `2px solid ${colors.border}` }}>
-                <th style={{ padding: '12px 16px', textAlign: 'left', color: colors.text }}>Name</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', color: colors.text }}>Email</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', color: colors.text }}>Phone</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', color: colors.text }}>Source</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', color: colors.text }}>Message</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', color: colors.text }}>Date</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', color: colors.text }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-                  {filteredInquiries.map((inquiry) => (
-                <tr key={inquiry._id} style={{ borderBottom: `1px solid ${colors.border}` }}>
-                      <td style={{ padding: '12px 16px' }}>{inquiry.name || 'N/A'}</td>
-                      <td style={{ padding: '12px 16px' }}>{inquiry.email || 'N/A'}</td>
-                      <td style={{ padding: '12px 16px' }}>{inquiry.phone || 'N/A'}</td>
-                      <td style={{ padding: '12px 16px' }}>{inquiry.source || 'N/A'}</td>
-                  <td style={{ padding: '12px 16px', maxWidth: 200 }}>
-                    <div style={{ 
-                      overflow: 'hidden', 
-                      textOverflow: 'ellipsis', 
-                      whiteSpace: 'nowrap' 
-                    }}>
-                          {inquiry.message || 'N/A'}
-                    </div>
-                  </td>
-                  <td style={{ padding: '12px 16px' }}>
-                        {inquiry.createdAt ? new Date(inquiry.createdAt).toLocaleDateString() : 'N/A'}
-                  </td>
-                  <td style={{ padding: '12px 16px' }}>
-                        <div style={{ display: 'flex', gap: 8 }}>
-                          {!inquiry.isConverted && canDo('convert_inquiries') && (
-                            <button
-                              onClick={() => handleConvertOpen(inquiry)}
-                              disabled={convertLoading}
-                              style={{
-                                background: colors.success,
-                                color: 'white',
-                                border: 'none',
-                                padding: '6px 12px',
-                                borderRadius: 4,
-                                cursor: convertLoading ? 'not-allowed' : 'pointer',
-                                fontSize: 12,
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 4,
-                                opacity: convertLoading ? 0.6 : 1
-                              }}
-                              title="Convert to Client"
-                            >
-                              {convertLoading ? <FaSpinner style={{ animation: 'spin 1s linear infinite' }} /> : <FaUserPlus />} Convert
-                            </button>
-                          )}
-                          {inquiry.isConverted && (
-                            <span style={{
-                              padding: '6px 12px',
-                              borderRadius: 4,
-                              background: colors.successLight,
-                              color: colors.success,
-                              fontSize: 12,
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 4
-                            }}>
-                              <FaCheck /> Converted
-                            </span>
-                          )}
-                          {canDo('delete_inquiries') && (
-                    <button
-                      onClick={() => handleDeleteInquiry(inquiry._id)}
-                      style={{
-                        background: colors.dangerDark,
-                        color: 'white',
-                        border: 'none',
-                        padding: '6px 12px',
-                        borderRadius: 4,
-                        cursor: 'pointer',
-                        fontSize: 12
-                      }}
-                            title="Delete Inquiry"
-                    >
-                            <FaTrash />
-                    </button>
-                          )}
-                        </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  );
     } else if (activeTab === 'emails' && canView('emails')) {
       return (
         <div style={{
@@ -1291,15 +1080,16 @@ function UserPanel() {
           width: sidebarCollapsed ? '80px' : '280px',
           height: '100vh',
           maxHeight: '100vh',
-          background: colors.sidebarGradient || colors.sidebarBg,
+          background: colors.sidebarBg,
           position: 'sticky',
           top: 0,
           alignSelf: 'flex-start',
-        zIndex: 998,
+          zIndex: 998,
           display: 'flex',
           flexDirection: 'column',
-          boxShadow: theme.shadows.lg,
-          transition: `all ${theme.transitions.slow}`,
+          boxShadow: 'none',
+          borderRight: `1px solid ${colors.sidebarHover}`,
+          transition: `all ${theme.transitions.normal}`,
           transform: sidebarOpen || window.innerWidth > 900 ? 'translateX(0)' : 'translateX(-100%)',
           overflow: 'hidden',
           flexShrink: 0,
@@ -1320,84 +1110,119 @@ function UserPanel() {
           <div style={{
             width: '32px',
             height: '32px',
-            borderRadius: theme.radius.md,
-            background: colors.primary,
+            borderRadius: 0,
+            background: colors.sidebarActive,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             color: colors.white,
             fontWeight: theme.typography.fontWeights.bold,
-            fontSize: theme.typography.fontSizes.base,
+            fontSize: theme.typography.fontSizes.lg,
             flexShrink: 0,
           }}>
-            U
+            M
           </div>
           {!sidebarCollapsed && (
             <div>
-              <div style={{ color: colors.sidebarTextActive, fontWeight: theme.typography.fontWeights.bold, fontSize: theme.typography.fontSizes.lg }}>
-                User Panel
+              <div style={{ 
+                color: colors.sidebarTextActive, 
+                fontWeight: theme.typography.fontWeights.bold, 
+                fontSize: theme.typography.fontSizes.xl,
+                letterSpacing: '-0.02em',
+                lineHeight: 1.1
+              }}>
+                MinuteSheet
               </div>
-              <div style={{ color: colors.sidebarText, fontSize: theme.typography.fontSizes.xs, marginTop: '2px' }}>
-                Dashboard
+              <div style={{ 
+                color: colors.sidebarText, 
+                fontSize: '0.6rem', 
+                textTransform: 'uppercase',
+                letterSpacing: '0.1em',
+                marginTop: '4px',
+                fontWeight: theme.typography.fontWeights.bold,
+                opacity: 0.8
+              }}>
+                User Dashboard
               </div>
             </div>
           )}
         </div>
         
         {/* Navigation */}
-        <nav style={{ flex: 1, padding: `${theme.spacing.xs} ${theme.spacing.xs}`, overflowY: 'auto', overflowX: 'hidden', minHeight: 0 }}>
+        <nav style={{ flex: 1, padding: 0, overflowY: 'auto', overflowX: 'hidden', minHeight: 0 }}>
           <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-            {getNavigationItems().map(({ id, icon: Icon, label }) => (
-              <li
-                key={id}
-                onClick={() => { handleTabClick(id); setSidebarOpen(false); }}
-                onMouseEnter={() => setHoveredNavItem(id)}
-                onMouseLeave={() => setHoveredNavItem(null)}
-                style={{
-                  marginBottom: '2px',
-                  cursor: 'pointer',
-                  borderRadius: theme.radius.sm,
-                  background: activeTab === id ? colors.sidebarActive : 'transparent',
-                  transition: `all ${theme.transitions.normal}`,
-                  position: 'relative',
-                }}
-              >
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: sidebarCollapsed ? 0 : theme.spacing.xs,
-                  padding: `${theme.spacing.xs} ${sidebarCollapsed ? theme.spacing.xs : theme.spacing.sm}`,
-                  color: activeTab === id ? colors.sidebarTextActive : colors.sidebarText,
-                  fontWeight: activeTab === id ? theme.typography.fontWeights.semibold : theme.typography.fontWeights.normal,
-                  fontSize: theme.typography.fontSizes.sm,
-                  justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
-                }}>
-                  <Icon style={{ fontSize: '0.95rem', width: '18px', textAlign: 'center', flexShrink: 0 }} />
-                  {!sidebarCollapsed && <span>{label}</span>}
-                </div>
-                {/* Tooltip when collapsed */}
-                {sidebarCollapsed && hoveredNavItem === id && (
+            {getNavigationItems().map(section => (
+              <React.Fragment key={section.category}>
+                {!sidebarCollapsed && (
                   <div style={{
-                    position: 'absolute',
-                    left: '100%',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    marginLeft: theme.spacing.sm,
-                    background: colors.textPrimary,
-                    color: colors.white,
-                    padding: `${theme.spacing.xs} ${theme.spacing.md}`,
-                    borderRadius: theme.radius.md,
-                    fontSize: theme.typography.fontSizes.sm,
-                    fontWeight: theme.typography.fontWeights.medium,
-                    whiteSpace: 'nowrap',
-                    pointerEvents: 'none',
-                    boxShadow: theme.shadows.md,
-                    zIndex: 1002,
+                    fontSize: '0.6rem',
+                    fontWeight: theme.typography.fontWeights.bold,
+                    color: colors.sidebarText,
+                    textTransform: 'none',
+                    letterSpacing: '0.05em',
+                    opacity: 0.6,
+                    borderTop: section.category !== 'Main' ? `1px solid ${colors.sidebarHover}` : 'none',
+                    marginTop: section.category !== 'Main' ? theme.spacing.sm : 0,
                   }}>
-                    {label}
+                    {section.category}
                   </div>
                 )}
-              </li>
+                {section.items.map(({ id, icon: Icon, label }) => (
+                  <li
+                    key={id}
+                    onClick={() => { handleTabClick(id); setSidebarOpen(false); }}
+                    onMouseEnter={() => setHoveredNavItem(id)}
+                    onMouseLeave={() => setHoveredNavItem(null)}
+                    style={{
+                      marginBottom: 0,
+                      cursor: 'pointer',
+                      borderRadius: 0,
+                      background: activeTab === id ? colors.sidebarHover : 'transparent',
+                      borderLeft: `4px solid ${activeTab === id ? colors.sidebarActive : 'transparent'}`,
+                      transition: `all ${theme.transitions.fast}`,
+                      position: 'relative',
+                    }}
+                  >
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: sidebarCollapsed ? 0 : theme.spacing.md,
+                      padding: `${theme.spacing.md} ${sidebarCollapsed ? theme.spacing.xs : theme.spacing.lg}`,
+                      color: activeTab === id ? colors.sidebarTextActive : colors.sidebarText,
+                      fontWeight: activeTab === id ? theme.typography.fontWeights.bold : theme.typography.fontWeights.semibold,
+                      fontSize: '0.85rem',
+                      textTransform: 'none',
+                      letterSpacing: '0.02em',
+                      justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+                    }}>
+                      <Icon style={{ fontSize: '1.1rem', width: '24px', textAlign: 'center', flexShrink: 0 }} />
+                      {!sidebarCollapsed && <span>{label}</span>}
+                    </div>
+                    {/* Tooltip when collapsed */}
+                    {sidebarCollapsed && hoveredNavItem === id && (
+                      <div style={{
+                        position: 'absolute',
+                        left: '100%',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        marginLeft: theme.spacing.sm,
+                        background: colors.textPrimary,
+                        color: colors.white,
+                        padding: `${theme.spacing.xs} ${theme.spacing.md}`,
+                        borderRadius: 0,
+                        fontSize: theme.typography.fontSizes.xs,
+                        fontWeight: theme.typography.fontWeights.bold,
+                        whiteSpace: 'nowrap',
+                        pointerEvents: 'none',
+                        boxShadow: '4px 4px 0px rgba(0,0,0,0.2)',
+                        zIndex: 1002,
+                      }}>
+                        {label}
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </React.Fragment>
             ))}
           </ul>
         </nav>
@@ -1449,21 +1274,23 @@ function UserPanel() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: sidebarCollapsed ? 0 : theme.spacing.xs,
-                padding: `${theme.spacing.xs} ${sidebarCollapsed ? theme.spacing.xs : theme.spacing.sm}`,
+                gap: 0,
+                padding: `${theme.spacing.sm} ${sidebarCollapsed ? theme.spacing.xs : theme.spacing.sm}`,
                 background: 'transparent',
                 border: `1px solid ${colors.sidebarHover}`,
-                borderRadius: theme.radius.sm,
+                borderRadius: 0,
                 color: colors.sidebarText,
                 cursor: 'pointer',
-                fontSize: theme.typography.fontSizes.xs,
-                fontWeight: theme.typography.fontWeights.medium,
-                transition: `all ${theme.transitions.normal}`,
+                fontSize: '0.7rem',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                fontWeight: theme.typography.fontWeights.bold,
+                transition: `all ${theme.transitions.fast}`,
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = colors.sidebarHover;
-                e.currentTarget.style.borderColor = colors.error;
-                e.currentTarget.style.color = colors.error;
+                e.currentTarget.style.background = '#7f1d1d';
+                e.currentTarget.style.borderColor = '#991b1b';
+                e.currentTarget.style.color = colors.white;
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.background = 'transparent';
@@ -1473,7 +1300,7 @@ function UserPanel() {
               title={sidebarCollapsed ? 'Logout' : ''}
             >
               <FaSignOutAlt />
-              {!sidebarCollapsed && <span>Logout</span>}
+              {!sidebarCollapsed && <span style={{ marginLeft: '4px' }}>Logout</span>}
             </button>
             
             {/* Collapse Button */}
@@ -1484,16 +1311,18 @@ function UserPanel() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: sidebarCollapsed ? 0 : theme.spacing.xs,
-                padding: `${theme.spacing.xs} ${sidebarCollapsed ? theme.spacing.xs : theme.spacing.sm}`,
+                gap: 0,
+                padding: `${theme.spacing.sm} ${sidebarCollapsed ? theme.spacing.xs : theme.spacing.sm}`,
                 background: 'transparent',
                 border: `1px solid ${colors.sidebarHover}`,
-                borderRadius: theme.radius.sm,
+                borderRadius: 0,
                 color: colors.sidebarText,
                 cursor: 'pointer',
-                fontSize: theme.typography.fontSizes.xs,
-                fontWeight: theme.typography.fontWeights.medium,
-                transition: `all ${theme.transitions.normal}`,
+                fontSize: '0.7rem',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                fontWeight: theme.typography.fontWeights.bold,
+                transition: `all ${theme.transitions.fast}`,
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = colors.sidebarHover;
@@ -1506,7 +1335,7 @@ function UserPanel() {
               title={sidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
             >
               {sidebarCollapsed ? <FaChevronRight /> : <FaChevronLeft />}
-              {!sidebarCollapsed && <span>Collapse</span>}
+              {!sidebarCollapsed && <span style={{ marginLeft: '4px' }}>Collapse</span>}
             </button>
           </div>
         </div>

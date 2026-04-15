@@ -1,3 +1,6 @@
+import dns from "dns";
+dns.setServers(["8.8.8.8", "8.8.4.4"]);
+
 import express from "express";
 import { createServer } from 'http';
 import UserRoutes from "./routes/UserRoutes.js";
@@ -33,6 +36,8 @@ import TwoFactorRoutes, { verify2FALoginRoute } from './routes/TwoFactorRoutes.j
 import { verify2FALogin } from './controllers/TwoFactorController.js';
 import PasswordResetRoutes from './routes/PasswordResetRoutes.js';
 import AdminTwoFactorRoutes from './routes/AdminTwoFactorRoutes.js';
+import InvoiceRoutes from './routes/InvoiceRoutes.js';
+import AdminAssetRoutes from './routes/AdminAssetRoutes.js';
 
 dotenv.config();
 
@@ -65,16 +70,22 @@ app.use(express.json());
 
 // Connect to database and start server
 const startServer = async () => {
-    try {
-        await connectDB();
+    // Start listening immediately so the port is open even if DB is slow/fails
+    httpServer.listen(5001, '0.0.0.0', () => {
+        console.log("------------------------------------------");
+        console.log("CRM API Server is running on port 5001");
+        console.log("Endpoint: http://localhost:5001/api/crm");
+        console.log("------------------------------------------");
+    });
 
-        httpServer.listen(3000, '0.0.0.0', () => {
-            console.log("http://localhost:3000/api/crm", "Server is running on port 3000");
-        });
+    try {
+        console.log("Attempting to connect to MongoDB...");
+        await connectDB();
     } catch (error) {
-        console.error("Failed to start server:", error.message);
-        console.error("Please fix the MongoDB connection issue and restart the server.");
-        process.exit(1);
+        console.error("CRITICAL: MongoDB connection failed initially.");
+        console.error("The server is still running, but DB-dependent routes will fail.");
+        console.error("Error Detail:", error.message);
+        // We don't exit(1) here to allow the server to stay alive for diagnostics
     }
 };
 
@@ -84,6 +95,10 @@ app.use((req, res, next) => {
     console.log(`Req method is ${req.method}`)
     next()
 })
+
+app.get("/", (req, res) => {
+    res.json({ message: "CRM API is running..." });
+});
 
 app.use("/api/crm", UserRoutes);
 app.use("/api/users", UserRoutes);
@@ -116,6 +131,8 @@ app.post("/api/2fa/verify-login", verify2FALogin);
 app.use("/api/2fa", TwoFactorRoutes);
 // Admin 2FA management routes (require admin authentication)
 app.use("/api/admin-2fa", AdminTwoFactorRoutes);
+app.use("/api/invoices", InvoiceRoutes);
+app.use("/api/admin-assets", AdminAssetRoutes);
 
 // Error Handling Middleware
 app.use(notFound);

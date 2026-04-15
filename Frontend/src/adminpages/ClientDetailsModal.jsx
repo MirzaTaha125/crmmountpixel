@@ -1430,12 +1430,13 @@ function ClientDetailsModal({ client, open, onClose, colors, userRole }) {
         </div>
       <div style={{
         borderRadius: theme.radius.lg,
-        overflow: 'hidden',
         boxShadow: theme.shadows.sm,
         background: colors.white,
         border: `1px solid ${colors.borderLight}`,
+        overflowX: 'auto',
+        WebkitOverflowScrolling: 'touch'
       }}>
-        <div style={{ overflowX: 'auto' }}>
+        <div style={{ minWidth: '800px' }}>
           <table style={{
             width: '100%',
             borderCollapse: 'collapse',
@@ -1972,12 +1973,13 @@ function ClientDetailsModal({ client, open, onClose, colors, userRole }) {
       </div>
       <div style={{
         borderRadius: theme.radius.lg,
-        overflow: 'hidden',
         boxShadow: theme.shadows.sm,
         background: colors.white,
         border: `1px solid ${colors.borderLight}`,
+        overflowX: 'auto',
+        WebkitOverflowScrolling: 'touch'
       }}>
-        <div style={{ overflowX: 'auto' }}>
+        <div style={{ minWidth: '800px' }}>
           <table style={{
                           width: '100%',
             borderCollapse: 'collapse',
@@ -2370,7 +2372,12 @@ function ClientDetailsModal({ client, open, onClose, colors, userRole }) {
         }}>
           {editHostingDomainId ? 'Edit Record' : 'Add New Record'}
         </h4>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: theme.spacing.md, marginBottom: theme.spacing.md }}>
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+          gap: theme.spacing.md, 
+          marginBottom: theme.spacing.md 
+        }}>
           <div>
             <label style={{ display: 'block', marginBottom: theme.spacing.xs, fontSize: theme.typography.fontSizes.sm, fontWeight: theme.typography.fontWeights.semibold, color: colors.textPrimary }}>
               Type <span style={{ color: colors.error }}>*</span>
@@ -2418,7 +2425,12 @@ function ClientDetailsModal({ client, open, onClose, colors, userRole }) {
             />
           </div>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: theme.spacing.md, marginBottom: theme.spacing.md }}>
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', 
+          gap: theme.spacing.md, 
+          marginBottom: theme.spacing.md 
+        }}>
           <div>
             <label style={{ display: 'block', marginBottom: theme.spacing.xs, fontSize: theme.typography.fontSizes.sm, fontWeight: theme.typography.fontWeights.semibold, color: colors.textPrimary }}>
               Duration
@@ -2544,12 +2556,13 @@ function ClientDetailsModal({ client, open, onClose, colors, userRole }) {
       {/* Table */}
       <div style={{
         borderRadius: theme.radius.lg,
-        overflow: 'hidden',
         boxShadow: theme.shadows.sm,
         background: colors.white,
         border: `1px solid ${colors.borderLight}`,
+        overflowX: 'auto',
+        WebkitOverflowScrolling: 'touch'
       }}>
-        <div style={{ overflowX: 'auto' }}>
+        <div style={{ minWidth: '800px' }}>
           <table style={{
             width: '100%',
             borderCollapse: 'collapse',
@@ -2720,9 +2733,10 @@ function ClientDetailsModal({ client, open, onClose, colors, userRole }) {
         border: `1px solid ${colors.borderLight}`,
       }}>
         <div style={{
-          display: 'flex',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
           gap: theme.spacing.md,
-          alignItems: 'center',
+          alignItems: 'end',
           marginBottom: theme.spacing.md,
         }}>
           <select
@@ -2814,12 +2828,13 @@ function ClientDetailsModal({ client, open, onClose, colors, userRole }) {
 
       <div style={{
         borderRadius: theme.radius.lg,
-        overflow: 'hidden',
         boxShadow: theme.shadows.sm,
         background: colors.white,
         border: `1px solid ${colors.borderLight}`,
+        overflowX: 'auto',
+        WebkitOverflowScrolling: 'touch'
       }}>
-        <div style={{ overflowX: 'auto' }}>
+        <div style={{ minWidth: '600px' }}>
           <table style={{
             width: '100%',
             borderCollapse: 'collapse',
@@ -3079,11 +3094,13 @@ function ClientDetailsModal({ client, open, onClose, colors, userRole }) {
           background: colors.white,
           borderRadius: theme.radius.lg,
           border: `1px solid ${colors.border}`,
-          overflow: 'hidden',
+          overflowX: 'auto',
+          WebkitOverflowScrolling: 'touch'
         }}>
           <table style={{
             width: '100%',
             borderCollapse: 'collapse',
+            background: 'transparent',
           }}>
             <thead style={{
               background: colors.primaryBg,
@@ -3278,26 +3295,32 @@ function ClientDetailsModal({ client, open, onClose, colors, userRole }) {
       <div style={{
         background: colors.white,
         borderRadius: theme.radius['3xl'],
-        width: '90%',
+        width: '95%',
+        maxWidth: '1200px',
         maxHeight: '90vh',
         overflow: 'hidden',
         boxShadow: theme.shadows['2xl'],
         display: 'flex',
         flexDirection: 'column',
+        margin: theme.spacing.sm,
       }}>
         <header style={{
-          padding: `${theme.spacing['xl']} ${theme.spacing['2xl']}`,
+          padding: `${theme.spacing.lg} ${theme.spacing.xl}`,
           borderBottom: `1px solid ${colors.borderLight}`,
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           background: colors.white,
+          flexWrap: 'wrap',
+          gap: theme.spacing.md,
         }}>
           <h2 style={{
             margin: 0,
-            fontSize: theme.typography.fontSizes['3xl'],
+            fontSize: theme.typography.fontSizes['xl'],
             fontWeight: theme.typography.fontWeights.bold,
             color: colors.primary,
+            flex: '1 1 auto',
+            minWidth: '200px',
           }}>
             {client.name} Details
           </h2>
@@ -3351,8 +3374,13 @@ function ClientDetailsModal({ client, open, onClose, colors, userRole }) {
         <div style={{
           display: 'flex',
           borderBottom: `1px solid ${colors.border}`,
-          padding: `0 ${theme.spacing['2xl']}`,
+          padding: `0 ${theme.spacing.xl}`,
           background: colors.white,
+          overflowX: 'auto',
+          whiteSpace: 'nowrap',
+          WebkitOverflowScrolling: 'touch',
+          scrollbarWidth: 'none', // Hide scrollbar for Chrome/Safari
+          msOverflowStyle: 'none' // Hide scrollbar for IE/Edge
         }}>
           {TABS.map((tab, index) => (
             <button
