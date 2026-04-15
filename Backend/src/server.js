@@ -53,19 +53,7 @@ const httpServer = createServer(app);
 // Initializing socket.io
 initSocket(httpServer);
 
-// Security Headers
-app.use(helmet());
-
-// Rate Limiting
-const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 1000, // Limit each IP to 100 request per windowMs
-    standardHeaders: true,
-    legacyHeaders: false,
-});
-app.use(limiter);
-
-// CORS Configuration
+// CORS Configuration — must be before helmet and all routes
 const allowedOrigins = [
     'https://minutesheet.com',
     'https://www.minutesheet.com',
@@ -73,11 +61,11 @@ const allowedOrigins = [
     'http://localhost:3000'
 ];
 
-app.use(cors({
+const corsOptions = {
     origin: function (origin, callback) {
-        // Allow requests with no origin (like mobile apps, curl, or same-origin)
+        // Allow requests with no origin (mobile apps, curl, same-origin)
         if (!origin) return callback(null, true);
-        
+
         if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
             callback(null, true);
         } else {
@@ -88,7 +76,25 @@ app.use(cors({
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
+};
+
+// Handle preflight OPTIONS requests for all routes
+app.options('*', cors(corsOptions));
+app.use(cors(corsOptions));
+
+// Security Headers (after CORS so helmet doesn't override CORS headers)
+app.use(helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
+
+// Rate Limiting
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 1000,
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+app.use(limiter);
 app.use(express.json());
 
 // Connect to database and start server
