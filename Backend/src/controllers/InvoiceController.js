@@ -19,6 +19,52 @@ function generateInvoiceNumber() {
   return 'INV-' + Date.now().toString(36).toUpperCase() + '-' + Math.floor(Math.random() * 9000 + 1000);
 }
 
+// Create-or-update the PaymentHistory row for a paid invoice.
+//
+// The bug we're fixing: findOneAndUpdate quietly no-ops when the PH row doesn't
+// exist (e.g. inquiry invoices skip PH creation because they have no clientId
+// yet; occasional creation failures also leave the row missing). Result: the
+// invoice ends up "Paid" on the invoices page but INVISIBLE in Sales / Revenue
+// reports and exports. `upsert` guarantees a row exists for every paid invoice.
+//
+// Callers pass the invoice + a partial patch (paymentMethod, notes, taxFee,
+// paymentDate, status). Anything not in the patch is filled from the invoice.
+async function upsertPaymentHistoryFor(invoice, patch = {}) {
+  if (!invoice?.invoiceNumber) return null;
+  try {
+    const method = patch.paymentMethod
+      || (invoice.provider === 'stripe' ? 'Stripe'
+        : invoice.provider === 'manual' ? (invoice.manualPaymentMethod || 'Other')
+        : 'PayPal');
+
+    const setDoc = {
+      // Always keep these in sync with the invoice — even on updates — so a
+      // brand/client rename doesn't leave stale rows for reports.
+      clientId:       invoice.clientId || null,
+      userId:         invoice.createdBy || null,
+      amount:         invoice.amount,
+      currency:       'USD',
+      paymentMethod:  method,
+      description:    invoice.title + (invoice.description ? ` — ${invoice.description}` : ''),
+      status:         patch.status || (invoice.status === 'Paid' ? 'Completed' : 'Pending'),
+      invoiceNumber:  invoice.invoiceNumber,
+      paymentDate:    patch.paymentDate || invoice.paidAt || invoice.createdAt || new Date(),
+      notes:          patch.notes || 'Payment recorded via invoice generator',
+      brand:          invoice.brand || '',
+    };
+    if (patch.taxFee != null) setDoc.taxFee = patch.taxFee;
+
+    return await PaymentHistory.findOneAndUpdate(
+      { invoiceNumber: invoice.invoiceNumber },
+      { $set: setDoc },
+      { new: true, upsert: true, setDefaultsOnInsert: true }
+    );
+  } catch (e) {
+    console.error(`upsertPaymentHistoryFor(${invoice?.invoiceNumber}) failed:`, e.message);
+    return null;
+  }
+}
+
 async function notifyAdmins({ clientName, amount, invoiceNumber, title }) {
   try {
     const admins = await User.find({ Role: 'Admin' }).select('Email First_Name workEmail workPassword');
@@ -87,9 +133,18 @@ export async function linkInquiryInvoicesToClient(inquiryId, client) {
         if (client.brand) existingPH.brand = client.brand;
         await existingPH.save();
       } else {
-        // Preserve the actual provider (PayPal/Stripe) on the payment history record.
-        const method = inv.provider === 'stripe' ? 'Stripe' : 'PayPal';
-        const fee = inv.provider === 'stripe' ? inv.stripeFee : inv.paypalFee;
+        // Preserve the actual provider on the payment history record.
+        // Bug fix: manual invoices used to fall through the PayPal branch,
+        // which mislabelled the payment method AND read a fee off the wrong
+        // field. Handle all three providers explicitly.
+        const method =
+          inv.provider === 'stripe' ? 'Stripe' :
+          inv.provider === 'manual' ? (inv.manualPaymentMethod || 'Other') :
+          'PayPal';
+        const fee =
+          inv.provider === 'stripe' ? inv.stripeFee :
+          inv.provider === 'manual' ? undefined :   // manual invoices don't carry a provider fee
+          inv.paypalFee;
         await PaymentHistory.create({
           clientId: client._id,
           userId: inv.createdBy || client.createdBy,
@@ -239,7 +294,10 @@ export const createInvoice = async (req, res) => {
     let brandSnapshot = null;
     let paymentAccountSnapshot = null;
     let manualPaymentMethod = '';
-    let publicSlug = null;
+    // Left undefined for non-manual invoices — omitting the field (rather than
+    // setting it to null) keeps them out of the partial-unique publicSlug index
+    // cleanly and avoids `E11000 dup key: { publicSlug: null }` on retries.
+    let publicSlug;
 
     if (selectedProvider === 'manual') {
       const brandDoc = await Brand.findById(brandId).catch(() => null);
@@ -301,7 +359,9 @@ export const createInvoice = async (req, res) => {
       manualPaymentMethod,
       manualPaymentAccountSnapshot: paymentAccountSnapshot,
       brandSnapshot,
-      publicSlug,
+      // Only set publicSlug for manual invoices — other providers leave the
+      // field absent so they don't appear in the partial-unique index at all.
+      ...(publicSlug ? { publicSlug } : {}),
       paidAt: wantsPaid ? new Date() : null,
     });
 
@@ -377,7 +437,7 @@ export const createInvoice = async (req, res) => {
       }
     } else {
       try {
-        const pp = await createAndSendInvoice({ clientName, clientEmail, title, amount: numAmount, description, brand });
+        const pp = await createAndSendInvoice({ clientName, clientEmail, title, amount: numAmount, description, brand, invoiceNumber });
         invoice.paypalInvoiceId     = pp.invoiceId;
         invoice.paypalInvoiceUrl    = pp.invoiceUrl;
         invoice.paypalInvoiceStatus = pp.status;
@@ -500,11 +560,10 @@ async function syncInvoiceFromPaypal(invoice) {
       phUpdate.taxFee = invoice.paypalFee;
     }
 
-    if (invoice.invoiceNumber) {
-      await PaymentHistory.findOneAndUpdate({ invoiceNumber: invoice.invoiceNumber }, phUpdate);
-    }
-
     await invoice.save();
+    // Upsert (not just update) so an inquiry invoice that skipped PH creation
+    // still gets a row on payment — otherwise it goes missing from reports.
+    await upsertPaymentHistoryFor(invoice, phUpdate);
 
     if (!wasAlreadyPaid) {
       await convertInquiryClientOnPaid(invoice); // inquiry invoice → create the client automatically
@@ -548,11 +607,9 @@ async function syncInvoiceFromStripe(invoice) {
       phUpdate.taxFee = invoice.stripeFee;
     }
 
-    if (invoice.invoiceNumber) {
-      await PaymentHistory.findOneAndUpdate({ invoiceNumber: invoice.invoiceNumber }, phUpdate);
-    }
-
     await invoice.save();
+    // Upsert so paid invoices never go missing from Sales/Revenue reports.
+    await upsertPaymentHistoryFor(invoice, phUpdate);
 
     if (!wasAlreadyPaid) {
       await convertInquiryClientOnPaid(invoice);
@@ -676,6 +733,7 @@ export const createPaypalInvoiceForExisting = async (req, res) => {
       amount: invoice.amount,
       description: invoice.description,
       brand: invoice.brand,
+      invoiceNumber: invoice.invoiceNumber,
     });
 
     invoice.paypalInvoiceId     = pp.invoiceId;
@@ -813,17 +871,14 @@ export const paypalInvoiceWebhook = async (req, res) => {
           invoice.netAmount = feeData.netAmount;
         }
 
-        if (invoice.invoiceNumber) {
-          await PaymentHistory.findOneAndUpdate(
-            { invoiceNumber: invoice.invoiceNumber },
-            {
-              status: 'Completed',
-              paymentMethod: 'PayPal',
-              notes: `Paid via PayPal — ${paypalInvoiceId}`,
-              ...(feeData ? { taxFee: feeData.fee } : {}),
-            }
-          );
-        }
+        // Upsert so webhook-triggered payments land in reports even if the
+        // PH row was never created (inquiry invoices, previous create errors).
+        await upsertPaymentHistoryFor(invoice, {
+          status: 'Completed',
+          paymentMethod: 'PayPal',
+          notes: `Paid via PayPal — ${paypalInvoiceId}`,
+          ...(feeData ? { taxFee: feeData.fee } : {}),
+        });
         await convertInquiryClientOnPaid(invoice); // inquiry invoice → create the client automatically
         await notifyAdmins({ clientName: invoice.clientName, amount: invoice.amount, invoiceNumber: invoice.invoiceNumber, title: invoice.title });
         await emitInvoicePaid(invoice);
@@ -842,12 +897,11 @@ export const paypalInvoiceWebhook = async (req, res) => {
     } else if (eventType === 'INVOICING.INVOICE.REFUNDED') {
       invoice.paypalInvoiceStatus = 'REFUNDED';
       invoice.status = 'Refunded';
-      if (invoice.invoiceNumber) {
-        await PaymentHistory.findOneAndUpdate(
-          { invoiceNumber: invoice.invoiceNumber },
-          { status: 'Refunded', notes: `Refunded via PayPal — ${paypalInvoiceId}` }
-        );
-      }
+      await upsertPaymentHistoryFor(invoice, {
+        status: 'Refunded',
+        paymentMethod: 'PayPal',
+        notes: `Refunded via PayPal — ${paypalInvoiceId}`,
+      });
     }
 
     await invoice.save();
@@ -935,20 +989,15 @@ export const markInvoicePaid = async (req, res) => {
     if (paymentMethod) invoice.manualPaymentMethod = paymentMethod;
     await invoice.save();
 
-    // Update PaymentHistory record if one exists for this invoice number.
-    if (invoice.invoiceNumber) {
-      try {
-        await PaymentHistory.findOneAndUpdate(
-          { invoiceNumber: invoice.invoiceNumber },
-          {
-            status: 'Completed',
-            paymentMethod: method,
-            paymentDate: invoice.paidAt,
-            notes: `Manual invoice — marked Paid via ${method}`,
-          }
-        );
-      } catch (e) { console.error('PaymentHistory update error:', e.message); }
-    }
+    // Upsert PaymentHistory (create if missing, update if present) — the old
+    // update-only path silently skipped invoices whose PH row was never created,
+    // making manual paid invoices vanish from Sales/Revenue reports.
+    await upsertPaymentHistoryFor(invoice, {
+      status: 'Completed',
+      paymentMethod: method,
+      paymentDate: invoice.paidAt,
+      notes: `Manual invoice — marked Paid via ${method}`,
+    });
 
     // Notify admins + fire any paid-side-effects (inquiry → client conversion, etc.)
     try {

@@ -197,6 +197,11 @@ const startServer = async () => {
 
     try {
         await connectDB();
+        // Auto-heal invoice indexes — Mongoose won't replace an existing index
+        // with different options, so we drop the old plain-unique `publicSlug_1`
+        // (created before we switched to a partial-unique index) and let the
+        // model recreate it correctly. Idempotent + safe to run every boot.
+        await healInvoiceIndexes();
     } catch (error) {
         console.error("CRITICAL: MongoDB connection failed initially.");
         console.error("The server is still running, but DB-dependent routes will fail.");
@@ -204,6 +209,45 @@ const startServer = async () => {
         // We don't exit(1) here to allow the server to stay alive for diagnostics
     }
 };
+
+// Fix stale publicSlug data + index at boot. Runs once, idempotent:
+//   1. Unset publicSlug on any row where it's null (legacy default). Otherwise
+//      the fresh partial-unique index refuses to build over multiple null docs.
+//   2. Drop the old plain-unique publicSlug_1 index if present.
+//   3. Ask Mongoose to rebuild indexes so the partial-unique one is created.
+async function healInvoiceIndexes() {
+    try {
+        const Invoice  = (await import('./model/Invoice.js')).default;
+        const coll = Invoice.collection;
+
+        // Step 1: clear any explicit null publicSlug so the partial index applies cleanly.
+        const nullPurge = await coll.updateMany(
+            { publicSlug: null },
+            { $unset: { publicSlug: '' } }
+        );
+        if (nullPurge.modifiedCount > 0) {
+            console.log(`[heal] Cleared publicSlug=null from ${nullPurge.modifiedCount} invoice(s).`);
+        }
+
+        // Step 2: drop the legacy (non-partial) unique index if it's there.
+        const indexes = await coll.indexes();
+        const bad = indexes.find(
+            (i) => i.name === 'publicSlug_1' && !i.partialFilterExpression
+        );
+        if (bad) {
+            console.log('[heal] Dropping legacy publicSlug_1 index (missing partial filter)…');
+            await coll.dropIndex('publicSlug_1');
+        }
+
+        // Step 3: sync so the correct partial-unique index is created.
+        await Invoice.syncIndexes();
+        if (bad || nullPurge.modifiedCount > 0) {
+            console.log('[heal] publicSlug index is now partial-unique and safe for null rows.');
+        }
+    } catch (err) {
+        console.error('[heal] Invoice index heal failed (non-fatal):', err.message);
+    }
+}
 
 startServer();
 

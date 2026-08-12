@@ -21,18 +21,38 @@ async function getAccessToken() {
   }
   if (_tokenCache && Date.now() < _tokenExpiry) return _tokenCache;
 
-  const response = await axios.post(
-    `${BASE_URL}/v1/oauth2/token`,
-    'grant_type=client_credentials',
-    {
-      auth: { username: PAYPAL_CLIENT_ID, password: PAYPAL_CLIENT_SECRET },
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+  // Trim whitespace defensively — copy-paste from PayPal dashboard sometimes
+  // includes trailing spaces / newlines that break Basic auth silently.
+  const id     = PAYPAL_CLIENT_ID.trim();
+  const secret = PAYPAL_CLIENT_SECRET.trim();
+
+  try {
+    const response = await axios.post(
+      `${BASE_URL}/v1/oauth2/token`,
+      'grant_type=client_credentials',
+      {
+        auth: { username: id, password: secret },
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+      }
+    );
+    _tokenCache = response.data.access_token;
+    _tokenExpiry = Date.now() + (((response.data.expires_in || 32000) - 60) * 1000);
+    return _tokenCache;
+  } catch (err) {
+    // On auth failure, log a redacted diagnostic so the operator can see WHY
+    // without leaking the secret to the log.
+    if (err?.response?.data?.error === 'invalid_client') {
+      console.error('[PayPal] Auth failed (invalid_client). Diagnostic:', {
+        mode: PAYPAL_MODE,
+        baseUrl: BASE_URL,
+        clientIdLen: id.length,
+        clientIdStart: id.slice(0, 6),
+        clientIdEnd: id.slice(-4),
+        secretLen: secret.length,
+      });
     }
-  );
-  _tokenCache = response.data.access_token;
-  // expires_in is in seconds; refresh 60s early to be safe.
-  _tokenExpiry = Date.now() + (((response.data.expires_in || 32000) - 60) * 1000);
-  return _tokenCache;
+    throw err;
+  }
 }
 
 /**
@@ -46,10 +66,14 @@ export async function createAndSendPaypalInvoice(paymentLink) {
     'Content-Type': 'application/json'
   };
 
-  const businessName  = process.env.PAYPAL_BUSINESS_NAME  || paymentLink.brand || 'Our Company';
+  const businessName    = process.env.PAYPAL_BUSINESS_NAME    || paymentLink.brand || 'Our Company';
+  const businessEmail   = process.env.PAYPAL_BUSINESS_EMAIL   || '';
+  const businessWebsite = process.env.PAYPAL_BUSINESS_WEBSITE || '';
   const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
-  // Build items list — mark as DIGITAL_GOODS so PayPal doesn't ask for shipping.
+  // Flat-rate items (`unit_of_measure: AMOUNT`) — matches PayPal's official
+  // "digital goods invoice" pattern. Combined with omitting shipping_info on
+  // primary_recipients below, this signals no physical delivery.
   const items = [
     {
       name: paymentLink.packageName,
@@ -59,8 +83,7 @@ export async function createAndSendPaypalInvoice(paymentLink) {
         currency_code: 'USD',
         value: parseFloat(paymentLink.packagePrice).toFixed(2)
       },
-      unit_of_measure: 'QUANTITY',
-      category: 'DIGITAL_GOODS'
+      unit_of_measure: 'AMOUNT',
     }
   ];
   if (paymentLink.additionalAmount && parseFloat(paymentLink.additionalAmount) > 0) {
@@ -71,20 +94,32 @@ export async function createAndSendPaypalInvoice(paymentLink) {
         currency_code: 'USD',
         value: parseFloat(paymentLink.additionalAmount).toFixed(2)
       },
-      unit_of_measure: 'QUANTITY',
-      category: 'DIGITAL_GOODS'
+      unit_of_measure: 'AMOUNT',
     });
   }
 
   const invoiceBody = {
     detail: {
+      ...(paymentLink.invoiceNumber ? { invoice_number: paymentLink.invoiceNumber } : {}),
       invoice_date: today,
       currency_code: 'USD',
       note: `Thank you for your business with ${businessName}.`,
       terms_and_conditions: 'Payment is due upon receipt.',
+      payment_term: { term_type: 'DUE_ON_RECEIPT' },
     },
     invoicer: {
       name: { business_name: businessName },
+      ...(businessEmail   ? { email_address: businessEmail } : {}),
+      ...(businessWebsite ? { website: businessWebsite }     : {}),
+    },
+    // No shipping-related fields anywhere. `configuration` only disables tips
+    // + partial payments. Omitting `shipping_info` on the recipient is what
+    // tells PayPal no physical delivery is required.
+    configuration: {
+      allow_tip: false,
+      tax_calculated_after_discount: true,
+      tax_inclusive: false,
+      partial_payment: { allow_partial_payment: false },
     },
     primary_recipients: [
       {
@@ -140,25 +175,51 @@ export async function getPaypalInvoiceStatus(invoiceId) {
 
 /**
  * Simple invoice creation — title + flat amount (used by new Invoice generator).
+ * Follows PayPal's official "Create an invoice for digital goods" pattern:
+ *   - `unit_of_measure: AMOUNT` (flat-rate) so PayPal treats it as a service bundle
+ *   - `payment_term.term_type: DUE_ON_RECEIPT`
+ *   - `invoicer` includes business email + website when configured
+ *   - NO `shipping_info` on primary_recipients → signals no physical delivery
+ *   - `configuration` disables tips + partial payment
  * Returns { invoiceId, invoiceUrl, status }
  */
-export async function createAndSendInvoice({ clientName, clientEmail, title, amount, description, brand }) {
+export async function createAndSendInvoice({ clientName, clientEmail, title, amount, description, brand, invoiceNumber }) {
   const token = await getAccessToken();
   const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
 
-  const businessName  = process.env.PAYPAL_BUSINESS_NAME  || brand || 'Our Company';
+  const businessName    = process.env.PAYPAL_BUSINESS_NAME    || brand || 'Our Company';
+  const businessEmail   = process.env.PAYPAL_BUSINESS_EMAIL   || '';
+  const businessWebsite = process.env.PAYPAL_BUSINESS_WEBSITE || '';
   const today = new Date().toISOString().split('T')[0];
 
   const invoiceBody = {
     detail: {
+      ...(invoiceNumber ? { invoice_number: invoiceNumber } : {}),
       invoice_date: today,
       currency_code: 'USD',
       note: `Thank you for your business with ${businessName}.`,
+      // DUE_ON_RECEIPT tells PayPal the invoice must be paid immediately —
+      // this is the pattern PayPal recommends for digital goods / services.
+      payment_term: { term_type: 'DUE_ON_RECEIPT' },
     },
     invoicer: {
       name: { business_name: businessName },
+      ...(businessEmail   ? { email_address: businessEmail } : {}),
+      ...(businessWebsite ? { website: businessWebsite }     : {}),
+    },
+    // Configuration flags — disable tips + partial payments. NOT setting
+    // any shipping-related field here; omitting shipping_info below is the
+    // documented signal that no physical delivery is required.
+    configuration: {
+      allow_tip: false,
+      tax_calculated_after_discount: true,
+      tax_inclusive: false,
+      partial_payment: { allow_partial_payment: false },
     },
     primary_recipients: [{
+      // Billing info only — no shipping_info block. This is what tells PayPal
+      // to skip shipping-address collection at checkout (per PayPal's digital-
+      // goods invoice pattern).
       billing_info: {
         name: { given_name: clientName },
         ...(clientEmail ? { email_address: clientEmail } : {})
@@ -169,8 +230,9 @@ export async function createAndSendInvoice({ clientName, clientEmail, title, amo
       ...(description ? { description } : {}),
       quantity: '1',
       unit_amount: { currency_code: 'USD', value: parseFloat(amount).toFixed(2) },
-      unit_of_measure: 'QUANTITY',
-      category: 'DIGITAL_GOODS'
+      // AMOUNT (not QUANTITY) — flat-rate billing for a one-time package/service.
+      // This is the pattern PayPal's own docs use for digital-goods invoices.
+      unit_of_measure: 'AMOUNT',
     }],
   };
 

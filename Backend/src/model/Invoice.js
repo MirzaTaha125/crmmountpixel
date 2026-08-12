@@ -60,12 +60,24 @@ const invoiceSchema = new mongoose.Schema({
   brandSnapshot:                 { type: brandSnapshotSchema, default: null },
 
   // Public shareable link slug — random, unguessable. Any invoice that has
-  // one can be viewed at /invoice/<slug> without authentication.
-  publicSlug:          { type: String, unique: true, sparse: true },
+  // one can be viewed at /invoice/<slug> without authentication. Only manual
+  // invoices carry a slug; PayPal/Stripe rows leave the field unset (NOT null)
+  // so the partial-unique index below can rely on `$type: 'string'` filtering.
+  publicSlug:          { type: String },
 
   netAmount:           { type: Number },
   paidAt:              { type: Date },
   createdBy:           { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });
+
+// Partial unique index on publicSlug — only indexes documents where publicSlug
+// is a string, so any number of PayPal/Stripe rows with publicSlug=null can
+// coexist without triggering a duplicate-key error. `sparse` alone doesn't
+// help here because the field IS present (just null); `partialFilterExpression`
+// gives us the actual "index only when set" behaviour.
+invoiceSchema.index(
+  { publicSlug: 1 },
+  { unique: true, partialFilterExpression: { publicSlug: { $type: 'string' } } }
+);
 
 export default mongoose.model('Invoice', invoiceSchema);

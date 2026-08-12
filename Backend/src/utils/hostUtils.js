@@ -25,9 +25,27 @@ export function normalizeHost(input) {
 
 // Parse whatever the admin put in the Official Websites textarea (newline- or
 // comma-separated) into a de-duplicated array of normalized hostnames.
+// The frontend posts this as a JSON-encoded array via FormData, so we try
+// JSON.parse first before falling back to splitting on whitespace/commas.
 export function parseOfficialWebsites(input) {
   if (input === undefined || input === null) return [];
-  const list = Array.isArray(input) ? input : String(input).split(/[\s,;]+/);
+  let list;
+  if (Array.isArray(input)) {
+    list = input;
+  } else {
+    const raw = String(input).trim();
+    // Try JSON first (frontend sends JSON.stringify'd array via FormData)
+    if (raw.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(raw);
+        list = Array.isArray(parsed) ? parsed : [raw];
+      } catch {
+        list = raw.split(/[\s,;]+/);
+      }
+    } else {
+      list = raw.split(/[\s,;]+/);
+    }
+  }
   const seen = new Set();
   for (const entry of list) {
     const host = normalizeHost(entry);
