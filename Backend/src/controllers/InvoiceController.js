@@ -561,12 +561,16 @@ async function syncInvoiceFromPaypal(invoice) {
     }
 
     await invoice.save();
-    // Upsert (not just update) so an inquiry invoice that skipped PH creation
-    // still gets a row on payment — otherwise it goes missing from reports.
+    if (!wasAlreadyPaid) {
+      // Convert inquiry → client BEFORE writing PH so PH.clientId is populated
+      // and non-admin users (Finance filters by assignments) can see the row.
+      try { await convertInquiryClientOnPaid(invoice); }
+      catch (e) { console.error('inquiry conversion on PayPal paid failed:', e.message); }
+    }
+    // Upsert AFTER inquiry conversion so the fresh clientId + brand land on the PH row.
     await upsertPaymentHistoryFor(invoice, phUpdate);
 
     if (!wasAlreadyPaid) {
-      await convertInquiryClientOnPaid(invoice); // inquiry invoice → create the client automatically
       await notifyAdmins({ clientName: invoice.clientName, amount: invoice.amount, invoiceNumber: invoice.invoiceNumber, title: invoice.title });
       await emitInvoicePaid(invoice);
     }
@@ -608,11 +612,16 @@ async function syncInvoiceFromStripe(invoice) {
     }
 
     await invoice.save();
-    // Upsert so paid invoices never go missing from Sales/Revenue reports.
+    if (!wasAlreadyPaid) {
+      // Convert inquiry → client BEFORE writing PH so it's linked from the start.
+      try { await convertInquiryClientOnPaid(invoice); }
+      catch (e) { console.error('inquiry conversion on Stripe paid failed:', e.message); }
+    }
+    // Upsert AFTER so PH gets the fresh clientId + brand — otherwise non-admin
+    // users' Finance page (filtered by assignments) wouldn't see the row.
     await upsertPaymentHistoryFor(invoice, phUpdate);
 
     if (!wasAlreadyPaid) {
-      await convertInquiryClientOnPaid(invoice);
       await notifyAdmins({ clientName: invoice.clientName, amount: invoice.amount, invoiceNumber: invoice.invoiceNumber, title: invoice.title });
       await emitInvoicePaid(invoice);
     }
@@ -989,6 +998,15 @@ export const markInvoicePaid = async (req, res) => {
     if (paymentMethod) invoice.manualPaymentMethod = paymentMethod;
     await invoice.save();
 
+    // Order matters: convert the inquiry into a client FIRST so the invoice
+    // has clientId + brand populated before we write PaymentHistory. Otherwise
+    // PH is stored with clientId=null and non-admin users (whose Finance page
+    // filters by their assigned clients) can't see it. Failure here is
+    // non-fatal — we still fall through to upsert PH so the row exists.
+    try {
+      await convertInquiryClientOnPaid(invoice);
+    } catch (e) { console.error('inquiry conversion on paid failed:', e.message); }
+
     // Upsert PaymentHistory (create if missing, update if present) — the old
     // update-only path silently skipped invoices whose PH row was never created,
     // making manual paid invoices vanish from Sales/Revenue reports.
@@ -999,9 +1017,8 @@ export const markInvoicePaid = async (req, res) => {
       notes: `Manual invoice — marked Paid via ${method}`,
     });
 
-    // Notify admins + fire any paid-side-effects (inquiry → client conversion, etc.)
+    // Notify admins + emit socket event (best-effort, doesn't block response).
     try {
-      await convertInquiryClientOnPaid(invoice);
       await notifyAdmins({
         clientName: invoice.clientName,
         amount: invoice.amount,
@@ -1025,6 +1042,252 @@ export const markInvoicePaid = async (req, res) => {
   } catch (err) {
     console.error('markInvoicePaid error:', err);
     res.status(500).json({ message: 'Error marking invoice paid', error: err.message });
+  }
+};
+
+// ─── Resync an invoice to Finance (PaymentHistory) ──────────────────────────
+//
+// Repair action for the "invoice paid but not showing in Finance" case.
+// Runs the same reconciliation the paid-side-effects would run, without
+// changing invoice.status: converts a paid inquiry invoice to a client (if
+// not already), then upserts a fresh PaymentHistory row so the invoice appears
+// in Sales/Revenue reports for the right client + brand.
+//
+// Safe to call on any invoice (Pending, Paid, Cancelled, Refunded) — it
+// mirrors invoice.status into PaymentHistory.status either way.
+export const resyncInvoiceToFinance = async (req, res) => {
+  try {
+    const invoice = await Invoice.findById(req.params.id);
+    if (!invoice) return res.status(404).json({ message: 'Invoice not found' });
+
+    let convertedNow = false;
+    // Only try inquiry conversion if the invoice is actually paid AND still
+    // linked to an inquiry that hasn't been converted yet.
+    if (invoice.status === 'Paid' && invoice.inquiryId && !invoice.clientId) {
+      try {
+        const before = invoice.clientId;
+        await convertInquiryClientOnPaid(invoice);
+        // Re-read invoice — convertInquiryClientOnPaid mutates it via save().
+        const fresh = await Invoice.findById(invoice._id);
+        if (fresh) {
+          invoice.clientId = fresh.clientId;
+          invoice.brand    = fresh.brand;
+        }
+        convertedNow = !!(invoice.clientId && !before);
+      } catch (e) {
+        console.error('resync: inquiry conversion failed:', e.message);
+      }
+    }
+
+    // Map invoice status to a PH status.
+    const phStatus =
+      invoice.status === 'Paid'      ? 'Completed'
+      : invoice.status === 'Refunded' ? 'Refunded'
+      : invoice.status === 'Cancelled' ? 'Cancelled'
+      : 'Pending';
+
+    // Pick the right paymentMethod label per provider.
+    const method =
+      invoice.provider === 'stripe' ? 'Stripe' :
+      invoice.provider === 'manual' ? (invoice.manualPaymentMethod || 'Other') :
+      'PayPal';
+
+    // Attach fees when we have them so the Finance net-amount math is correct.
+    const patch = {
+      status: phStatus,
+      paymentMethod: method,
+      paymentDate: invoice.paidAt || invoice.createdAt || new Date(),
+      notes: `Resynced to Finance — invoice status ${invoice.status}`,
+    };
+    if (invoice.provider === 'stripe' && invoice.stripeFee != null) patch.taxFee = invoice.stripeFee;
+    if (invoice.provider !== 'stripe' && invoice.provider !== 'manual' && invoice.paypalFee != null) patch.taxFee = invoice.paypalFee;
+
+    const ph = await upsertPaymentHistoryFor(invoice, patch);
+
+    res.json({
+      message: 'Invoice resynced to Finance',
+      convertedInquiryToClient: convertedNow,
+      paymentHistoryId: ph?._id || null,
+      clientId: invoice.clientId || null,
+      brand: invoice.brand || '',
+      status: invoice.status,
+    });
+  } catch (err) {
+    console.error('resyncInvoiceToFinance error:', err);
+    res.status(500).json({ message: 'Error resyncing invoice', error: err.message });
+  }
+};
+
+// ─── Preview: find the client that this invoice's email would map to ─────────
+//
+// Used by the "Assign to Client" modal on the invoice list. Returns a snapshot
+// of the invoice + the client whose email matches invoice.clientEmail (if any).
+// Read-only — never writes. If multiple clients share the same email, all are
+// returned so the admin can pick.
+export const matchInvoiceClient = async (req, res) => {
+  try {
+    const invoice = await Invoice.findById(req.params.id);
+    if (!invoice) return res.status(404).json({ message: 'Invoice not found' });
+
+    let matches = [];
+    if (invoice.clientEmail) {
+      // Case-insensitive email lookup — clients might have their email stored
+      // with different casing than what was typed on the invoice.
+      const emailRegex = new RegExp(`^${invoice.clientEmail.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+      matches = await Client.find({ email: emailRegex })
+        .select('_id name email brand clientId phone status')
+        .lean();
+    }
+
+    // If the invoice is currently linked to a client, include that too so
+    // the UI can show "already assigned" state.
+    let currentClient = null;
+    if (invoice.clientId) {
+      currentClient = await Client.findById(invoice.clientId)
+        .select('_id name email brand clientId')
+        .lean();
+    }
+
+    res.json({
+      invoice: {
+        _id: invoice._id,
+        invoiceNumber: invoice.invoiceNumber,
+        title: invoice.title,
+        amount: invoice.amount,
+        clientName: invoice.clientName,
+        clientEmail: invoice.clientEmail,
+        status: invoice.status,
+        provider: invoice.provider,
+        manualPaymentMethod: invoice.manualPaymentMethod,
+        brand: invoice.brand,
+        inquiryId: invoice.inquiryId || null,
+      },
+      currentClient,
+      matches,     // 0..N matches by email
+    });
+  } catch (err) {
+    console.error('matchInvoiceClient error:', err);
+    res.status(500).json({ message: 'Error matching client', error: err.message });
+  }
+};
+
+// ─── Assign / re-assign an invoice to a client ───────────────────────────────
+//
+// Repair action: manually link an invoice (and its PaymentHistory row) to a
+// specific client. Fixes the "payment created but missing from client's
+// payment history" case where the automatic inquiry→client conversion never
+// ran or ran with the wrong client.
+//
+// Body: { clientId: <ObjectId> }
+//
+// Does:
+//   1. Verifies the client exists.
+//   2. Sets invoice.clientId + invoice.brand (from client) if unset/changed.
+//   3. If the invoice was linked to an unconverted inquiry, marks that inquiry
+//      as converted to this client (so it doesn't linger in the inquiries list).
+//   4. Ensures the invoice creator is assigned to the client (non-admins need
+//      this to see the client in their list).
+//   5. Upserts PaymentHistory with the new clientId + brand so the payment
+//      appears in the client's history and in Sales/Revenue reports.
+export const assignInvoiceToClient = async (req, res) => {
+  try {
+    const { clientId } = req.body || {};
+    if (!clientId) return res.status(400).json({ message: 'clientId is required' });
+
+    const invoice = await Invoice.findById(req.params.id);
+    if (!invoice) return res.status(404).json({ message: 'Invoice not found' });
+
+    const client = await Client.findById(clientId);
+    if (!client) return res.status(404).json({ message: 'Selected client not found' });
+
+    // Non-admin repair: only allow assigning to clients this user is assigned to.
+    if (req.user.Role !== 'Admin') {
+      const has = await Assignment.findOne({ userId: req.user._id, clientId: client._id });
+      if (!has) {
+        return res.status(403).json({ message: 'You are not assigned to this client — ask an admin to assign the payment.' });
+      }
+    }
+
+    const prevClientId = invoice.clientId?.toString();
+    invoice.clientId = client._id;
+    if (client.brand) invoice.brand = client.brand;
+    await invoice.save();
+
+    // If the invoice was tied to an inquiry that wasn't converted yet, mark it
+    // converted to this client so the inquiries list stays clean.
+    if (invoice.inquiryId) {
+      try {
+        const inquiry = await Inquiry.findById(invoice.inquiryId);
+        if (inquiry && !inquiry.isConverted) {
+          inquiry.isConverted = true;
+          inquiry.convertedToClientId = client._id;
+          inquiry.convertedAt = new Date();
+          inquiry.convertedBy = req.user._id;
+          await inquiry.save();
+        }
+      } catch (e) { console.error('inquiry mark-converted failed:', e.message); }
+    }
+
+    // Ensure creator is assigned to this client (non-admins won't see the
+    // client in their list otherwise). Idempotent — no-op if already assigned.
+    if (invoice.createdBy) {
+      try {
+        const existing = await Assignment.findOne({ clientId: client._id, userId: invoice.createdBy });
+        if (!existing) {
+          const creator = await User.findById(invoice.createdBy).select('Role');
+          const validRoles = ['Front', 'Upsell', 'Production', 'Employee'];
+          if (creator && validRoles.includes(creator.Role)) {
+            await Assignment.create({ clientId: client._id, userId: invoice.createdBy, role: creator.Role });
+          }
+        }
+      } catch (e) { console.error('assignment create failed:', e.message); }
+    }
+
+    // Upsert PaymentHistory so the payment shows on the client's history + reports.
+    const method =
+      invoice.provider === 'stripe' ? 'Stripe' :
+      invoice.provider === 'manual' ? (invoice.manualPaymentMethod || 'Other') :
+      'PayPal';
+    const ph = await upsertPaymentHistoryFor(invoice, {
+      status: invoice.status === 'Paid' ? 'Completed'
+        : invoice.status === 'Refunded' ? 'Refunded'
+        : invoice.status === 'Cancelled' ? 'Cancelled'
+        : 'Pending',
+      paymentMethod: method,
+      paymentDate: invoice.paidAt || invoice.createdAt || new Date(),
+      notes: `Manually assigned to client ${client.name}`,
+    });
+
+    await logActivity({
+      userId: req.user._id,
+      action: 'invoice_assigned_client',
+      entityType: 'Invoice',
+      entityId: invoice._id,
+      description: `Invoice ${invoice.invoiceNumber} assigned to client ${client.name}`,
+      module: 'Invoices',
+      req,
+    });
+
+    res.json({
+      message: `Payment assigned to ${client.name}. Now visible in their payment history + Finance reports.`,
+      wasReassigned: prevClientId && prevClientId !== client._id.toString(),
+      client: {
+        _id: client._id,
+        name: client.name,
+        email: client.email,
+        brand: client.brand,
+        clientId: client.clientId,
+      },
+      paymentHistoryId: ph?._id || null,
+      invoice: {
+        _id: invoice._id,
+        clientId: invoice.clientId,
+        brand: invoice.brand,
+      },
+    });
+  } catch (err) {
+    console.error('assignInvoiceToClient error:', err);
+    res.status(500).json({ message: 'Error assigning invoice to client', error: err.message });
   }
 };
 
