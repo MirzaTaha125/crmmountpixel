@@ -40,6 +40,14 @@ export const authMiddleware = async (req, res, next) => {
   }
 };
 
+// Run after authMiddleware on internal-only data (payroll, loans). authMiddleware
+// also admits client (customer) tokens; this turns those away so a customer
+// login can never read staff salaries.
+export const staffOnly = (req, res, next) => {
+  if (!req.user) return res.status(403).json({ message: "Staff access only" });
+  next();
+};
+
 // Optional auth — if a valid Bearer token is present, populate req.user (or req.client);
 // otherwise continue unauthenticated. Never blocks the request. Used on routes that must
 // stay publicly reachable but should still attribute the acting user when known (audit logs).

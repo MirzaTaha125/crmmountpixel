@@ -18,7 +18,14 @@ const expenseSchema = new mongoose.Schema({
   category: {
     type: String,
     required: true,
-    enum: ['Office', 'Marketing', 'Salary', 'Utilities', 'Transport', 'Other'],
+    // Includes the sub-scoped Marketing/PPC and Marketing/SMM values so the
+    // Expenses form can save a channel-tagged marketing expense that the
+    // Marketing report + Accounting waterfall can then count correctly.
+    // Legacy "Marketing" (no channel) is kept for backward-compat with old rows.
+    enum: [
+      'Office', 'Marketing', 'Marketing/PPC', 'Marketing/SMM',
+      'Salary', 'Utilities', 'Transport', 'Other'
+    ],
     trim: true
   },
   expenseDate: {

@@ -31,6 +31,7 @@ import ClientRoutes from './routes/ClientRoutes.js';
 import PackageRoutes from './routes/PackageRoutes.js';
 import EmployeeRoutes from './routes/EmployeeRoutes.js';
 import SalaryRoutes from './routes/SalaryRoutes.js';
+import LoanRoutes from './routes/LoanRoutes.js';
 import ProjectDetailRoutes from './routes/ProjectDetailRoutes.js';
 import PaymentHistoryRoutes from './routes/PaymentHistoryRoutes.js';
 import AssignmentRoutes from './routes/AssignmentRoutes.js';
@@ -53,6 +54,11 @@ import { verify2FALogin } from './controllers/TwoFactorController.js';
 import PasswordResetRoutes from './routes/PasswordResetRoutes.js';
 import AdminTwoFactorRoutes from './routes/AdminTwoFactorRoutes.js';
 import InvoiceRoutes from './routes/InvoiceRoutes.js';
+import AccountingRoutes from './routes/AccountingRoutes.js';
+import ShareholderRoutes from './routes/ShareholderRoutes.js';
+import WithdrawalRoutes from './routes/WithdrawalRoutes.js';
+import HoldInUSRoutes from './routes/HoldInUSRoutes.js';
+import MarketingRoutes from './routes/MarketingRoutes.js';
 import { autoSyncPendingInvoices, stripeInvoiceWebhook, publicInvoiceView } from './controllers/InvoiceController.js';
 import AdminAssetRoutes from './routes/AdminAssetRoutes.js';
 import PublicInquiryRoutes from './routes/PublicInquiryRoutes.js';
@@ -267,14 +273,16 @@ app.get("/", (req, res) => {
 // route files stay untouched. Reads are ignored; only successful create/update/delete
 // are recorded, attributed to the acting user. Routes that already log richly inside
 // their controllers (Users, Clients, Payments, Invoices, 2FA) are intentionally NOT
-// wrapped to avoid duplicate entries. Employee/Package/Salary routes are public, so
+// wrapped to avoid duplicate entries. Employee/Package routes are public, so
 // `optionalAuth` is added to attribute the acting user when a token is sent.
+// Salary and Loan routes enforce staff login inside their own routers.
 app.use("/api/crm", UserRoutes);
 app.use("/api/users", UserRoutes);
 app.use("/api/clients", ClientRoutes);
 app.use("/api/packages", optionalAuth, auditLog({ module: 'Packages', entityType: 'Package' }), PackageRoutes);
 app.use("/api/employees", optionalAuth, auditLog({ module: 'Employees', entityType: 'Employee' }), EmployeeRoutes);
 app.use("/api/salaries", optionalAuth, auditLog({ module: 'Salaries', entityType: 'Salary' }), SalaryRoutes);
+app.use("/api/loans", auditLog({ module: 'Loans', entityType: 'Loan' }), LoanRoutes);
 app.use("/api/project-details", auditLog({ module: 'Projects', entityType: 'ProjectDetail' }), ProjectDetailRoutes);
 app.use("/api/payment-history", PaymentHistoryRoutes);
 app.use("/api/assignments", auditLog({ module: 'Assignments', entityType: 'Assignment' }), AssignmentRoutes);
@@ -301,6 +309,11 @@ app.use("/api/2fa", TwoFactorRoutes);
 // Admin 2FA management routes (require admin authentication)
 app.use("/api/admin-2fa", AdminTwoFactorRoutes);
 app.use("/api/invoices", InvoiceRoutes);
+app.use("/api/accounting", AccountingRoutes);
+app.use("/api/shareholders", ShareholderRoutes);
+app.use("/api/withdrawals",  WithdrawalRoutes);
+app.use("/api/holds",        HoldInUSRoutes);
+app.use("/api/marketing",    MarketingRoutes);
 app.use("/api/admin-assets", auditLog({ module: 'Assets', entityType: 'AdminAsset' }), AdminAssetRoutes);
 app.use("/api/brands", auditLog({ module: 'Brands', entityType: 'Brand' }), BrandRoutes);
 app.use("/api/checklists", auditLog({ module: 'BrandStatus', entityType: 'Checklist' }), ChecklistRoutes);
