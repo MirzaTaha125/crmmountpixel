@@ -1,5 +1,7 @@
 import Loan from "../model/Loan.js";
 import Employee from "../model/Employee.js";
+import { planLoanDeductions } from "../services/loanService.js";
+import { logRecordChange } from '../services/activityLogService.js';
 
 const populateEmployee = (q) => q.populate('employee', 'Name designation salary');
 
@@ -53,6 +55,7 @@ export async function createLoan(req, res) {
       createdBy: req.user?._id || null,
     });
     const populated = await populateEmployee(Loan.findById(loan._id));
+    await logRecordChange({ req, verb: 'created', entityType: 'Loan', module: 'Salary', doc: populated });
     res.status(201).json({ message: "Loan recorded", loan: populated });
   } catch (error) {
     console.error('createLoan error:', error);
@@ -89,6 +92,7 @@ export async function updateLoan(req, res) {
 
     await loan.save();
     const populated = await populateEmployee(Loan.findById(loan._id));
+    await logRecordChange({ req, verb: 'updated', entityType: 'Loan', module: 'Salary', doc: populated });
     res.status(200).json({ message: "Loan updated", loan: populated });
   } catch (error) {
     console.error('updateLoan error:', error);
@@ -110,9 +114,41 @@ export async function deleteLoan(req, res) {
       });
     }
     await loan.deleteOne();
+    await logRecordChange({ req, verb: 'deleted', entityType: 'Loan', module: 'Salary', doc: loan });
     res.status(200).json({ message: "Loan deleted" });
   } catch (error) {
     console.error('deleteLoan error:', error);
     res.status(500).json({ message: "Error deleting loan", error: error.message });
+  }
+}
+
+// POST /api/loans/preview
+//
+// What the bulk salary sheet shows in its "loan" column before anything is
+// saved. Read-only: it runs the same plan the deduction itself runs, so the
+// figure on screen is the figure that will be taken — and it is still only a
+// suggestion, because the sheet lets each row be edited before saving.
+export async function previewLoanDeductions(req, res) {
+  try {
+    const { month, year, rows } = req.body || {};
+    if (!Array.isArray(rows)) {
+      return res.status(400).json({ message: "rows must be an array" });
+    }
+
+    const previews = {};
+    for (const row of rows) {
+      if (!row?.employee) continue;
+      const { total, split } = await planLoanDeductions({
+        employeeId: row.employee,
+        month,
+        year,
+        maxDeductible: row.maxDeductible,
+      });
+      previews[String(row.employee)] = { total, count: split.length };
+    }
+
+    res.status(200).json({ previews });
+  } catch (error) {
+    res.status(500).json({ message: "Error previewing loan deductions", error: error.message });
   }
 }

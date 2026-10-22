@@ -1,6 +1,7 @@
 import ClientAsset from '../model/ClientAsset.js';
 import Client from '../model/Client.js';
 import Assignment from '../model/Assignment.js';
+import { logRecordChange } from '../services/activityLogService.js';
 
 // Get all assets for the authenticated client (client panel)
 export const getMyAssets = async (req, res) => {
@@ -147,6 +148,7 @@ export const deleteClientAsset = async (req, res) => {
     }
 
     await ClientAsset.findByIdAndDelete(id);
+    await logRecordChange({ req, verb: 'deleted', entityType: 'ClientAsset', module: 'Clients', doc: asset });
     res.status(200).json({ message: 'Asset deleted successfully' });
   } catch (error) {
     console.error('Error deleting client asset:', error);

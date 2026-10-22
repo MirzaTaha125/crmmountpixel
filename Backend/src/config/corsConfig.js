@@ -8,7 +8,10 @@ const DEFAULT_ORIGINS = [
     'https://minutesheet.com',
     'https://www.minutesheet.com',
     'https://webdevelopersinc.com/',
-    'http://localhost:5173',
+    'http://localhost:5173',   // current frontend
+    'http://localhost:5174',   // the rebuild, run side by side
+    'http://127.0.0.1:5173',
+    'http://127.0.0.1:5174',
 ];
 
 function originsFromEnv() {

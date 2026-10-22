@@ -2,6 +2,7 @@ import Inquiry from '../model/Inquiry.js';
 import Brand from '../model/Brand.js';
 import { emitNewInquiry } from '../socket.js';
 import { normalizeHost } from '../utils/hostUtils.js';
+import { normalizeSourceUrl } from '../utils/sourceUrl.js';
 
 export const submitPublicInquiry = async (req, res) => {
   try {
@@ -56,9 +57,12 @@ export const submitPublicInquiry = async (req, res) => {
     //   1. sourceUrl explicitly sent in the body (e.g. window.location.href)
     //   2. Referer header (set by the browser to the page URL)
     //   3. Origin header (just the origin, no path — fallback)
-    // We cap the length so pathological URLs can't bloat the record.
-    const rawSourceUrl = String(bodySourceUrl || req.headers.referer || req.headers.origin || '').trim();
-    const resolvedSourceUrl = rawSourceUrl.length > 500 ? rawSourceUrl.slice(0, 500) : rawSourceUrl;
+    // Each candidate is validated in turn, so a junk `sourceUrl` in the body
+    // falls through to the headers instead of wiping out the real page URL.
+    const resolvedSourceUrl =
+      normalizeSourceUrl(bodySourceUrl) ||
+      normalizeSourceUrl(req.headers.referer) ||
+      normalizeSourceUrl(req.headers.origin);
 
     // Prepare inquiry data
     const inquiryData = {

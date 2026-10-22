@@ -19,6 +19,9 @@ const salarySchema = new mongoose.Schema({
   // Total loan installments taken out of this salary, plus the per-loan split
   // so a delete can hand each amount back to the right loan.
   loanDeduction: { type: Number, default: 0 },
+  // The Expense row this salary posts into the ledger. Kept so an edit updates
+  // that same row instead of leaving a stale duplicate behind.
+  expenseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Expense', default: null },
   loanDeductions: {
     type: [{
       loan:   { type: mongoose.Schema.Types.ObjectId, ref: 'Loan' },

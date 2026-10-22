@@ -48,6 +48,15 @@ export const staffOnly = (req, res, next) => {
   next();
 };
 
+// Run after authMiddleware on actions only an administrator may take, such as
+// creating users or changing someone's role.
+export const adminOnly = (req, res, next) => {
+  if (!req.user || req.user.Role !== 'Admin') {
+    return res.status(403).json({ message: "Administrator access required" });
+  }
+  next();
+};
+
 // Optional auth — if a valid Bearer token is present, populate req.user (or req.client);
 // otherwise continue unauthenticated. Never blocks the request. Used on routes that must
 // stay publicly reachable but should still attribute the acting user when known (audit logs).

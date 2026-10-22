@@ -7,16 +7,19 @@ import {
   deleteExpense,
   getFinancialSummary 
 } from '../controllers/ExpenseController.js';
-import { authMiddleware } from '../middleware/authMiddleware.js';
+import { authMiddleware, staffOnly } from '../middleware/authMiddleware.js';
+import { requirePermission } from '../middleware/permissionMiddleware.js';
 
 const router = express.Router();
 
-router.post('/', authMiddleware, createExpense);
-router.get('/', authMiddleware, getAllExpenses);
-router.get('/summary', authMiddleware, getFinancialSummary);
-router.get('/:id', authMiddleware, getExpenseById);
-router.put('/:id', authMiddleware, updateExpense);
-router.delete('/:id', authMiddleware, deleteExpense);
+router.use(authMiddleware, staffOnly);
+
+router.post('/', requirePermission('add_expenses'), createExpense);
+router.get('/', requirePermission('view_expenses'), getAllExpenses);
+router.get('/summary', requirePermission('view_expenses'), getFinancialSummary);
+router.get('/:id', requirePermission('view_expenses'), getExpenseById);
+router.put('/:id', requirePermission('edit_expenses'), updateExpense);
+router.delete('/:id', requirePermission('delete_expenses'), deleteExpense);
 
 export default router;
 

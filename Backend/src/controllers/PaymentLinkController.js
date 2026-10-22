@@ -2,6 +2,7 @@ import PaymentLink from '../model/PaymentLink.js';
 import PaymentHistory from '../model/PaymentHistory.js';
 import Client from '../model/Client.js';
 import Assignment from '../model/Assignment.js';
+import Brand from '../model/Brand.js';
 import User from '../model/User.js';
 import { sendPaymentConfirmationEmail, sendEmail } from '../services/emailService.js';
 import { logPaymentLinkAction, logPaymentAction, logActivity } from '../services/activityLogService.js';
@@ -324,7 +325,25 @@ export const getPaymentLinkById = async (req, res) => {
       }
     }
     
-    res.json(paymentLink);
+    // This page is opened by a client with no account, so it cannot call the
+    // authenticated /api/brands. Send the brand's public face along with the
+    // link. Additive: the old frontend ignores the extra field.
+    let brandInfo = null;
+    if (paymentLink.brand) {
+      const brandDoc = await Brand.findOne({ name: paymentLink.brand }).catch(() => null);
+      if (brandDoc) {
+        brandInfo = {
+          name: brandDoc.name || '',
+          logo: brandDoc.logo || '',
+          mainColor: brandDoc.mainColor || '',
+          phone: brandDoc.phone || '',
+          email: brandDoc.email || '',
+          officialWebsites: brandDoc.officialWebsites || [],
+        };
+      }
+    }
+
+    res.json({ ...paymentLink.toObject(), brandInfo });
   } catch (err) {
     res.status(500).json({ message: 'Error fetching payment link', error: err.message });
   }

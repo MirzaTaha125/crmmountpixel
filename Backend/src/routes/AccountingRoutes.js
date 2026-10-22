@@ -1,10 +1,14 @@
 import express from 'express';
 import { getAccountingLedger, computeAccountingLedger } from '../controllers/AccountingController.js';
 import { listRuns, getRun, createOrGetRun, updateRun, finalizeRun, deleteRun } from '../controllers/AccountingRunController.js';
-import { authMiddleware } from '../middleware/authMiddleware.js';
+import { authMiddleware, adminOnly } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
-router.use(authMiddleware);
+// Owner-level financial data: the profit waterfall, shareholder payouts,
+// withdrawals and money held in the US. These pages only ever open from the
+// admin panel, and no permission exists for them, so the API requires an
+// administrator rather than accepting any signed-in staff member.
+router.use(authMiddleware, adminOnly);
 
 // Live ledger — default settings (standalone page).
 router.get('/ledger',           getAccountingLedger);

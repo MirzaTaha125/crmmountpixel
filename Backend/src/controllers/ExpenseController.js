@@ -1,5 +1,6 @@
 import Expense from '../model/Expense.js';
 import PaymentHistory from '../model/PaymentHistory.js';
+import { logRecordChange } from '../services/activityLogService.js';
 
 // Helper function to convert PKR to USD
 const convertPKRtoUSD = (pkrAmount, exchangeRate) => {
@@ -61,6 +62,7 @@ export const createExpense = async (req, res) => {
       exchangeRate: storedExchangeRate
     });
 
+    await logRecordChange({ req, verb: 'created', entityType: 'Expense', module: 'Expenses', doc: expense });
     res.status(201).json({ 
       message: 'Expense created successfully', 
       expense,
@@ -182,6 +184,7 @@ export const updateExpense = async (req, res) => {
       return res.status(404).json({ message: 'Expense not found' });
     }
 
+    await logRecordChange({ req, verb: 'updated', entityType: 'Expense', module: 'Expenses', doc: expense });
     res.status(200).json({ message: 'Expense updated successfully', expense });
   } catch (error) {
     console.error('Error updating expense:', error);
@@ -198,6 +201,7 @@ export const deleteExpense = async (req, res) => {
       return res.status(404).json({ message: 'Expense not found' });
     }
 
+    await logRecordChange({ req, verb: 'deleted', entityType: 'Expense', module: 'Expenses', doc: expense });
     res.status(200).json({ message: 'Expense deleted successfully' });
   } catch (error) {
     console.error('Error deleting expense:', error);

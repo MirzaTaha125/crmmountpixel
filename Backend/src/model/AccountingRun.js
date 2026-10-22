@@ -14,9 +14,12 @@ const accountingRunSchema = new mongoose.Schema({
   year:  { type: Number, required: true },
   status: { type: String, enum: ['draft', 'completed'], default: 'draft' },
 
-  // Office allocation choice. 'equal' = split office total across all brands.
-  // 'manual' = admin sets per-brand amounts (validated to sum to office total).
-  officeMethod:      { type: String, enum: ['equal', 'manual'], default: 'equal' },
+  // Office allocation choice.
+  //   'revenue' = split the office total in proportion to what each brand earned
+  //   'manual'  = admin sets per-brand amounts
+  // 'equal' is the retired even split. It stays in the enum only so runs saved
+  // before the change still load and validate.
+  officeMethod:      { type: String, enum: ['revenue', 'equal', 'manual'], default: 'revenue' },
   officeAllocations: { type: [allocationSchema], default: [] },
 
   // Hold-in-US: same shape. Either equal split of a chosen total, or manual per brand.

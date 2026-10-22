@@ -66,10 +66,21 @@ const expenseSchema = new mongoose.Schema({
     type: String,
     enum: ['PayPal', 'Zelle', 'Bank'],
     trim: true
+  },
+  // Set when this expense was posted automatically from a Salary record. Such
+  // rows are owned by that salary: editing or deleting the salary rewrites or
+  // removes them, so the Expenses screen keeps them read-only.
+  salaryId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Salary',
+    default: null
   }
 }, {
   timestamps: true
 });
+
+// One expense per salary, but plenty of rows have no salary at all.
+expenseSchema.index({ salaryId: 1 }, { unique: true, sparse: true });
 
 const Expense = mongoose.model('Expense', expenseSchema);
 export default Expense;

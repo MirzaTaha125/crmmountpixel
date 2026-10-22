@@ -170,6 +170,22 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
+// The global cap above (1000 per 15 min) is far too generous for the endpoints
+// that accept credentials — it leaves room to grind through passwords and reset
+// codes. These get their own, much tighter budget per IP.
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    skipSuccessfulRequests: true,   // only failed attempts count against it
+    message: { message: 'Too many attempts. Please wait a few minutes and try again.' },
+});
+app.use('/api/users/login', authLimiter);
+app.use('/api/clients/login', authLimiter);
+app.use('/api/2fa/verify-login', authLimiter);
+app.use('/api/password-reset', authLimiter);
+
 // Stripe webhook MUST receive the raw request body (unparsed) for signature
 // verification. Mount it BEFORE express.json() so its handler sees a Buffer,
 // not a parsed object. All other routes still get parsed JSON below.
@@ -184,7 +200,17 @@ app.use(express.json());
 // Serve uploaded files
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+// Uploads are user-supplied. Served from our own origin, an .html or .svg file
+// would run scripts with the app's cookies and localStorage in reach, so the
+// browser is told never to sniff the type and never to render these inline.
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads'), {
+    setHeaders: (res, filePath) => {
+        res.setHeader('X-Content-Type-Options', 'nosniff');
+        if (!/\.(png|jpe?g|gif|webp|avif|pdf)$/i.test(filePath)) {
+            res.setHeader('Content-Disposition', 'attachment');
+        }
+    },
+}));
 
 // Connect to database and start server
 const startServer = async () => {

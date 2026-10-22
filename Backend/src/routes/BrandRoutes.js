@@ -33,7 +33,10 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
   fileFilter: (req, file, cb) => {
     // Only accept images for the logo; ignore anything else silently.
-    cb(null, /^image\//.test(file.mimetype));
+    // SVG is excluded on purpose: it is a document that can carry <script>,
+    // and a brand logo is rendered inline.
+    const allowed = /^image\/(png|jpe?g|gif|webp|avif)$/i;
+    cb(null, allowed.test(file.mimetype));
   },
 });
 

@@ -360,12 +360,42 @@ export async function clearActivityLogs(req, res) {
       });
     }
 
-    const { days } = req.query; // Optional: clear logs older than X days
+    // Three ways to choose what goes, in order of precision:
+    //   ids        — the rows ticked in the table
+    //   from / to  — a date range, which is how people think about "clear the
+    //                last three months"
+    //   days       — older than N days (kept: the old UI sends this)
+    // With none of them, everything goes.
+    const { days, from, to } = req.query;
+    const ids = req.query.ids
+      ? String(req.query.ids).split(',').map((v) => v.trim()).filter(Boolean)
+      : [];
 
     let filter = {};
-    if (days) {
+    if (ids.length > 0) {
+      filter._id = { $in: ids };
+    } else if (from || to) {
+      const range = {};
+      if (from) {
+        const start = new Date(from);
+        if (Number.isNaN(start.getTime())) {
+          return res.status(400).json({ message: 'Invalid "from" date' });
+        }
+        range.$gte = start;
+      }
+      if (to) {
+        const end = new Date(to);
+        if (Number.isNaN(end.getTime())) {
+          return res.status(400).json({ message: 'Invalid "to" date' });
+        }
+        // A date with no time means the whole of that day.
+        if (!String(to).includes('T')) end.setHours(23, 59, 59, 999);
+        range.$lte = end;
+      }
+      filter.createdAt = range;
+    } else if (days) {
       const daysAgo = new Date();
-      daysAgo.setDate(daysAgo.getDate() - parseInt(days));
+      daysAgo.setDate(daysAgo.getDate() - parseInt(days, 10));
       filter.createdAt = { $lt: daysAgo };
     }
 
@@ -380,12 +410,18 @@ export async function clearActivityLogs(req, res) {
       userId: req.user._id,
       action: 'settings_updated',
       entityType: 'System',
-      description: `Activity logs cleared by ${req.user.First_Name} ${req.user.Last_Name}${days ? ` (logs older than ${days} days)` : ' (all logs)'}`,
+      description: `Cleared ${result.deletedCount} activity log ${result.deletedCount === 1 ? 'entry' : 'entries'}`
+        + (ids.length ? ' (selected rows)'
+          : (from || to) ? ` (${from || 'the beginning'} to ${to || 'now'})`
+            : days ? ` (older than ${days} days)` : ' (everything)'),
       details: { 
         deletedCount: result.deletedCount,
         clearedBy: req.user._id,
         clearedByEmail: req.user.Email,
-        daysFilter: days || null
+        daysFilter: days || null,
+        from: from || null,
+        to: to || null,
+        selectedCount: ids.length || null
       },
       module: 'System',
       ipAddress: req.ip || req.headers['x-forwarded-for'] || req.connection.remoteAddress,

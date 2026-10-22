@@ -1,12 +1,18 @@
 import express from "express";
 import { createEmployee, getEmployees, getEmployeeById, updateEmployee, deleteEmployee } from "../controllers/EmployeeController.js";
 
-const router = express.Router();
+import { authMiddleware, staffOnly } from "../middleware/authMiddleware.js";
+import { requirePermission } from "../middleware/permissionMiddleware.js";
 
-router.post("/", createEmployee);
-router.get("/", getEmployees);
-router.get("/:id", getEmployeeById);
-router.put("/:id", updateEmployee);
-router.delete("/:id", deleteEmployee);
+const router = express.Router();
+// Staff records hold CNIC, salary, address and bank account numbers. These
+// routes used to be reachable with no token at all.
+router.use(authMiddleware, staffOnly);
+
+router.post("/", requirePermission("add_employees"), createEmployee);
+router.get("/", requirePermission("view_employees"), getEmployees);
+router.get("/:id", requirePermission("view_employees"), getEmployeeById);
+router.put("/:id", requirePermission("edit_employees"), updateEmployee);
+router.delete("/:id", requirePermission("delete_employees"), deleteEmployee);
 
 export default router; 

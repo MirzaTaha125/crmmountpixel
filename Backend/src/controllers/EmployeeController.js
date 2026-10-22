@@ -1,4 +1,5 @@
 import Employee from "../model/Employee.js";
+import { logRecordChange } from '../services/activityLogService.js';
 
 export async function createEmployee(req, res) {
   try {
@@ -8,6 +9,7 @@ export async function createEmployee(req, res) {
       delete employeeData.Pass;
     }
     const employee = await Employee.create(employeeData);
+    await logRecordChange({ req, verb: 'created', entityType: 'Employee', module: 'Employees', doc: employee });
     res.status(201).json({ message: "Employee created successfully", employee });
   } catch (error) {
     res.status(500).json({ message: "Error creating employee", error });
@@ -41,6 +43,7 @@ export async function updateEmployee(req, res) {
   try {
     const employee = await Employee.findByIdAndUpdate(req.params.id, req.body, { new: true });
     if (!employee) return res.status(404).json({ message: "Employee not found" });
+    await logRecordChange({ req, verb: 'updated', entityType: 'Employee', module: 'Employees', doc: employee });
     res.status(200).json({ message: "Employee updated successfully", employee });
   } catch (error) {
     res.status(500).json({ message: "Error updating employee", error });
@@ -51,6 +54,7 @@ export async function deleteEmployee(req, res) {
   try {
     const employee = await Employee.findByIdAndDelete(req.params.id);
     if (!employee) return res.status(404).json({ message: "Employee not found" });
+    await logRecordChange({ req, verb: 'deleted', entityType: 'Employee', module: 'Employees', doc: employee });
     res.status(200).json({ message: "Employee deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: "Error deleting employee", error });

@@ -2,6 +2,7 @@ import HostingDomain from '../model/HostingDomain.js';
 import Client from '../model/Client.js';
 import Assignment from '../model/Assignment.js';
 import mongoose from 'mongoose';
+import { logRecordChange } from '../services/activityLogService.js';
 
 // Get hosting/domain records for the authenticated client (client panel)
 export const getMyHostingDomains = async (req, res) => {
@@ -217,6 +218,7 @@ export const deleteHostingDomain = async (req, res) => {
     }
 
     await HostingDomain.findByIdAndDelete(id);
+    await logRecordChange({ req, verb: 'deleted', entityType: 'HostingDomain', module: 'Clients', doc: record });
     res.status(200).json({ message: 'Hosting/domain record deleted successfully' });
   } catch (error) {
     console.error('Error deleting hosting/domain record:', error);

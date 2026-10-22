@@ -44,7 +44,7 @@ function buildDateFilter({ month, year, startDate, endDate }) {
 // Core computation. Pure function — no req/res. Shared between GET (default
 // settings from DB) and POST (wizard overrides).
 // ─────────────────────────────────────────────────────────────────────────
-async function computeLedger({ month, year, startDate, endDate, brandsQuery, overrides = {} }) {
+async function computeLedger({ month, year, startDate, endDate, brandsQuery, includeInactive = false, overrides = {} }) {
   const dateFilter      = buildDateFilter({ month, year, startDate, endDate });
   const requestedBrands = parseBrandsQuery(brandsQuery);
 
@@ -71,10 +71,10 @@ async function computeLedger({ month, year, startDate, endDate, brandsQuery, ove
   const expenses = await Expense.find({ expenseDate: dateFilter }).lean();
   const expenseBrand = (e) => (e.brand || '').trim();
 
-  // 4) Office expenses = unattached expenses.
+  // 4) Office expenses = unattached expenses. The per-brand share is worked out
+  // further down, once we know how many brands actually traded this period.
   const officeExpenseItems = expenses.filter((e) => !expenseBrand(e));
   const officeExpenseTotal = officeExpenseItems.reduce((s, e) => s + parseFloat(e.amount || 0), 0);
-  const officeSharePerBrand = totalBrandCount > 0 ? officeExpenseTotal / totalBrandCount : 0;
 
   // 5) Per-brand rows (only SELECTED brands).
   const rows = [];
@@ -134,6 +134,26 @@ async function computeLedger({ month, year, startDate, endDate, brandsQuery, ove
     });
   }
 
+  // 5b) Only brands that EARNED this period take part in the run. A brand with
+  // no revenue has nothing to carry a share of the company's costs.
+  //
+  // A dropped brand may still have had expenses of its own. Those are reported
+  // separately rather than folded into the office pool, because the plan is for
+  // the parent to lend that brand the money — mixing it into everyone else's
+  // costs now would make it impossible to pull back out later.
+  const earned = (r) => r.revenue.total > 0;
+  const anyEarned = rows.some(earned);
+  const skipped = (!includeInactive && anyEarned) ? rows.filter((r) => !earned(r)) : [];
+  const skippedInactive = skipped.map((r) => r.name);
+  const skippedWithExpenses = skipped
+    .filter((r) => r.expenses.total > 0)
+    .map((r) => ({ brandId: r.brandId, name: r.name, expenses: r.expenses.total }));
+  const skippedExpenseTotal = skippedWithExpenses.reduce((sum, r) => sum + r.expenses, 0);
+
+  if (skipped.length > 0) {
+    for (let i = rows.length - 1; i >= 0; i--) if (!earned(rows[i])) rows.splice(i, 1);
+  }
+
   // 6) Totals across selected.
   const totalRevenue  = rows.reduce((s, r) => s + r.revenue.total,  0);
   const totalPaypal   = rows.reduce((s, r) => s + r.revenue.paypal, 0);
@@ -150,20 +170,31 @@ async function computeLedger({ month, year, startDate, endDate, brandsQuery, ove
 
   // ── OFFICE ALLOCATION ─────────────────────────────────────────────────
   // Two modes:
-  //   'equal'  — each SELECTED brand pays its 1/N share of the office total.
-  //              (Non-selected brands' shares are excluded from the view.)
-  //   'manual' — admin provides per-brand amounts (overrides.officeAllocations).
-  //              Any brand not listed gets 0.
-  const officeMethod = overrides.officeMethod || 'equal';
+  //   'revenue' — the office total is split in proportion to what each brand
+  //               earned, so a brand on 20% of the month's revenue carries 20%
+  //               of the shared costs. This is the default.
+  //   'manual'  — admin provides per-brand amounts (overrides.officeAllocations).
+  //               Any brand not listed gets 0.
+  //
+  // The old even split is gone. Runs saved with officeMethod 'equal' fall into
+  // the revenue split here; their finalised numbers come from the snapshot, so
+  // nothing already closed is rewritten.
+  const officeMethod = overrides.officeMethod === 'manual' ? 'manual' : 'revenue';
   const officeAllocMap = new Map(
     (overrides.officeAllocations || []).map((a) => [String(a.brandId), parseFloat(a.amount) || 0])
   );
+  // With the filter above every remaining brand has revenue, so this is only
+  // ever zero in a month where nobody earned anything — and then every brand is
+  // still listed, so an even split is the only sensible fallback.
+  const shareOfOffice = (r) => (totalRevenue > 0
+    ? officeExpenseTotal * (r.revenue.total / totalRevenue)
+    : (rows.length > 0 ? officeExpenseTotal / rows.length : 0));
   for (const r of rows) {
-    if (officeMethod === 'manual') {
-      r.officeShare = officeAllocMap.get(String(r.brandId)) || 0;
-    } else {
-      r.officeShare = officeSharePerBrand;
-    }
+    r.officeShare = officeMethod === 'manual'
+      ? (officeAllocMap.get(String(r.brandId)) || 0)
+      : shareOfOffice(r);
+    // Shown next to the amount in the wizard so the split is self-explaining.
+    r.revenueSharePercent = totalRevenue > 0 ? (r.revenue.total / totalRevenue) * 100 : 0;
   }
   const officeShareForSelection = rows.reduce((s, r) => s + r.officeShare, 0);
 
@@ -256,6 +287,12 @@ async function computeLedger({ month, year, startDate, endDate, brandsQuery, ove
     },
     allBrands:          allBrandNames,
     selectedBrands:     selectedBrandNames,
+    // Brands left out because they earned nothing this period, and — separately
+    // — any expenses those brands ran up, which are NOT part of this run's
+    // totals and are waiting on the parent-company loan arrangement.
+    skippedInactive,
+    skippedWithExpenses,
+    skippedExpenseTotal,
     totalBrandCount,
     selectedBrandCount: rows.length,
 
@@ -265,7 +302,6 @@ async function computeLedger({ month, year, startDate, endDate, brandsQuery, ove
       revenue: { total: totalRevenue, paypal: totalPaypal, stripe: totalStripe, manual: totalManual },
       expenses: { total: totalExpenses },
       balance: combinedBalance,
-      officeSharePerBrand,
       officeShare: officeShareForSelection,
       officeBreakdown: officeExpenseItems.map((e) => ({
         _id:         e._id,
@@ -296,8 +332,11 @@ async function computeLedger({ month, year, startDate, endDate, brandsQuery, ove
 // GET /api/accounting/ledger — default settings (used by the standalone page).
 export const getAccountingLedger = async (req, res) => {
   try {
-    const { month, year, startDate, endDate, brands: brandsQuery } = req.query;
-    const ledger = await computeLedger({ month, year, startDate, endDate, brandsQuery });
+    const { month, year, startDate, endDate, brands: brandsQuery, includeInactive } = req.query;
+    const ledger = await computeLedger({
+      month, year, startDate, endDate, brandsQuery,
+      includeInactive: includeInactive === 'true',
+    });
     res.json(ledger);
   } catch (err) {
     console.error('getAccountingLedger error:', err);
@@ -310,13 +349,14 @@ export const getAccountingLedger = async (req, res) => {
 // admin fills in office / hold allocations.
 export const computeAccountingLedger = async (req, res) => {
   try {
-    const { month, year, brands: brandsQuery,
+    const { month, year, brands: brandsQuery, includeInactive,
       officeMethod, officeAllocations,
       holdMethod, holdTotal, holdAllocations,
       charityPercent,
     } = req.body || {};
     const ledger = await computeLedger({
       month, year, brandsQuery,
+      includeInactive: includeInactive === true || includeInactive === 'true',
       overrides: {
         officeMethod, officeAllocations,
         holdMethod, holdTotal, holdAllocations,

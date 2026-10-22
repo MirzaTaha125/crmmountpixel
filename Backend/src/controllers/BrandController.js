@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import Brand from '../model/Brand.js';
 import { parseOfficialWebsites } from '../utils/hostUtils.js';
+import { logRecordChange } from '../services/activityLogService.js';
 
 // Fixed set of payment methods a brand can accept via manual invoices.
 const VALID_PAYMENT_METHODS = new Set(['Cheque', 'Wire', 'Online', 'Zelle', 'Taptap', 'Cashapp']);
@@ -111,6 +112,7 @@ export const createBrand = async (req, res) => {
     });
 
     bustPublicOriginCache();
+    await logRecordChange({ req, verb: 'created', entityType: 'Brand', module: 'Brands', doc: brand });
     res.status(201).json({ message: 'Brand created successfully', brand });
   } catch (error) {
     console.error('Error creating brand:', error);
@@ -212,6 +214,7 @@ export const updateBrand = async (req, res) => {
 
     await brand.save();
     bustPublicOriginCache();
+    await logRecordChange({ req, verb: 'updated', entityType: 'Brand', module: 'Brands', doc: brand });
     res.json({ message: 'Brand updated successfully', brand });
   } catch (error) {
     console.error('Error updating brand:', error);
@@ -225,6 +228,7 @@ export const deleteBrand = async (req, res) => {
     if (!brand) return res.status(404).json({ message: 'Brand not found' });
     removeLogoFile(brand.logo);
     bustPublicOriginCache();
+    await logRecordChange({ req, verb: 'deleted', entityType: 'Brand', module: 'Brands', doc: brand });
     res.json({ message: 'Brand deleted successfully' });
   } catch (error) {
     console.error('Error deleting brand:', error);

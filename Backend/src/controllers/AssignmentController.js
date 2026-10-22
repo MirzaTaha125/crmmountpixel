@@ -1,4 +1,5 @@
 import Assignment from '../model/Assignment.js';
+import { logRecordChange } from '../services/activityLogService.js';
 
 export const createAssignment = async (req, res) => {
   try {
@@ -41,6 +42,7 @@ export const deleteAssignment = async (req, res) => {
   try {
     const assignment = await Assignment.findByIdAndDelete(req.params.id);
     if (!assignment) return res.status(404).json({ error: 'Not found' });
+    await logRecordChange({ req, verb: 'deleted', entityType: 'Assignment', module: 'Clients', doc: assignment });
     res.json({ message: 'Deleted' });
   } catch (err) {
     res.status(500).json({ error: err.message });

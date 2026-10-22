@@ -316,6 +316,11 @@ const permissions = [
     category: 'inquiries'
   },
   {
+    name: 'view_inquiry_source_url',
+    description: 'View the page URL an inquiry was submitted from',
+    category: 'inquiries'
+  },
+  {
     name: 'view_ppc_inquiries',
     description: 'See inquiries whose source is PPC (in addition to own)',
     category: 'inquiries'
@@ -426,6 +431,13 @@ const permissions = [
     category: 'permissions'
   },
   
+  // Shared credentials
+  {
+    name: 'view_admin_assets',
+    description: 'View shared credentials',
+    category: 'admin_assets'
+  },
+
   // Activity Logs
   {
     name: 'view_activity_logs',

@@ -1,4 +1,5 @@
 import CustomPackage from '../model/CustomPackage.js';
+import { logRecordChange } from '../services/activityLogService.js';
 
 export const createCustomPackage = async (req, res) => {
   try {
@@ -6,6 +7,7 @@ export const createCustomPackage = async (req, res) => {
     const createdBy = req.user ? req.user._id : null;
     const customPackage = new CustomPackage({ name, price, description, category, createdBy });
     await customPackage.save();
+    await logRecordChange({ req, verb: 'created', entityType: 'CustomPackage', module: 'Packages', doc: customPackage });
     res.status(201).json(customPackage);
   } catch (err) {
     res.status(500).json({ message: 'Error creating custom package', error: err.message });
@@ -40,6 +42,7 @@ export const updateCustomPackage = async (req, res) => {
       { new: true }
     );
     if (!customPackage) return res.status(404).json({ message: 'Custom package not found' });
+    await logRecordChange({ req, verb: 'updated', entityType: 'CustomPackage', module: 'Packages', doc: customPackage });
     res.json(customPackage);
   } catch (err) {
     res.status(500).json({ message: 'Error updating custom package', error: err.message });
@@ -50,6 +53,7 @@ export const deleteCustomPackage = async (req, res) => {
   try {
     const customPackage = await CustomPackage.findByIdAndDelete(req.params.id);
     if (!customPackage) return res.status(404).json({ message: 'Custom package not found' });
+    await logRecordChange({ req, verb: 'deleted', entityType: 'CustomPackage', module: 'Packages', doc: customPackage });
     res.json({ message: 'Custom package deleted' });
   } catch (err) {
     res.status(500).json({ message: 'Error deleting custom package', error: err.message });

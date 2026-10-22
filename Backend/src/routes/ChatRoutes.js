@@ -32,9 +32,19 @@ const storage = multer.diskStorage({
   }
 });
 
+// Attachments are served back from our own origin, so anything the browser
+// would treat as a page or a script is refused outright.
+const BLOCKED_ATTACHMENTS = /\.(html?|xhtml|svg|js|mjs|css|jsp|php|asp|aspx|sh|bat|cmd|exe|dll|scr|jar|vbs|ps1)$/i;
+
 const upload = multer({
   storage,
   limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+  fileFilter: (req, file, cb) => {
+    if (BLOCKED_ATTACHMENTS.test(file.originalname)) {
+      return cb(new Error('That file type cannot be attached.'));
+    }
+    cb(null, true);
+  },
 });
 
 const router = express.Router();

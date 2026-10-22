@@ -1,4 +1,5 @@
 import ProjectDetail from '../model/ProjectDetail.js';
+import { logRecordChange } from '../services/activityLogService.js';
 
 export const createProjectDetail = async (req, res) => {
   try {
@@ -36,6 +37,7 @@ export const deleteProjectDetail = async (req, res) => {
   try {
     const detail = await ProjectDetail.findByIdAndDelete(req.params.id);
     if (!detail) return res.status(404).json({ error: 'Not found' });
+    await logRecordChange({ req, verb: 'deleted', entityType: 'ProjectDetail', module: 'Clients', doc: detail });
     res.json({ message: 'Deleted' });
   } catch (err) {
     res.status(500).json({ error: err.message });

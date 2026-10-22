@@ -7,6 +7,33 @@ import { decrypt } from '../utils/encryption.js';
 // Store OTPs temporarily (in production, use Redis or database)
 const otpStore = new Map();
 
+// A 6-digit code is only 1,000,000 possibilities, so without a cap it can be
+// guessed by brute force. Five wrong tries burns the code and the user has to
+// request a new one.
+const MAX_OTP_ATTEMPTS = 5;
+
+// Shared by verify-otp and the reset itself, which both check the code.
+// Returns null when the code is good, or the response to send back.
+function checkOtp(otpData, email, otp) {
+  if (!otpData) return { status: 400, body: { message: 'Invalid or expired OTP', valid: false } };
+
+  if (Date.now() > otpData.expiresAt) {
+    otpStore.delete(email);
+    return { status: 400, body: { message: 'OTP has expired', valid: false } };
+  }
+
+  if (otpData.otp !== otp) {
+    otpData.attempts = (otpData.attempts || 0) + 1;
+    if (otpData.attempts >= MAX_OTP_ATTEMPTS) {
+      otpStore.delete(email);
+      return { status: 400, body: { message: 'Too many incorrect attempts. Request a new code.', valid: false } };
+    }
+    return { status: 400, body: { message: 'Invalid OTP', valid: false } };
+  }
+
+  return null;
+}
+
 // Generate 6-digit OTP
 const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -16,7 +43,6 @@ const generateOTP = () => {
 const sendOTPEmail = async (email, otp) => {
   console.log('\n========== PASSWORD RESET EMAIL DEBUG ==========');
   console.log('📧 Attempting to send OTP email to:', email);
-  console.log('🔑 Generated OTP:', otp);
 
   try {
     // Find the first admin user to send the email from
@@ -290,14 +316,14 @@ export const requestPasswordReset = async (req, res) => {
 
     // Generate OTP
     const otp = generateOTP();
-    console.log('🔑 OTP generated:', otp);
 
     // Store OTP with expiration (10 minutes) and account type
     const otpData = {
       otp,
       email: normalizedEmail,
       accountType, // 'user' or 'client'
-      expiresAt: Date.now() + 10 * 60 * 1000 // 10 minutes
+      expiresAt: Date.now() + 10 * 60 * 1000, // 10 minutes
+      attempts: 0,
     };
     otpStore.set(normalizedEmail, otpData);
     console.log('💾 OTP stored in memory with 10-minute expiration');
@@ -350,20 +376,10 @@ export const resetPassword = async (req, res) => {
     // Check if OTP exists and is valid
     const otpData = otpStore.get(normalizedEmail);
 
-    if (!otpData) {
-      return res.status(400).json({ message: 'Invalid or expired OTP' });
-    }
-
-    // Check if OTP is expired
-    if (Date.now() > otpData.expiresAt) {
-      otpStore.delete(normalizedEmail);
-      return res.status(400).json({ message: 'OTP has expired. Please request a new one.' });
-    }
-
-    // Verify OTP
-    if (otpData.otp !== otp) {
-      return res.status(400).json({ message: 'Invalid OTP' });
-    }
+    // Same guarded check the verify step uses, so the reset endpoint can't be
+    // used to brute-force the code either.
+    const otpFailure = checkOtp(otpData, normalizedEmail, otp);
+    if (otpFailure) return res.status(otpFailure.status).json({ message: otpFailure.body.message });
 
     // Get account type from OTP data
     const accountType = otpData.accountType || 'user'; // Default to 'user' for backward compatibility
@@ -438,14 +454,8 @@ export const verifyOTP = async (req, res) => {
       return res.status(400).json({ message: 'Invalid or expired OTP', valid: false });
     }
 
-    if (Date.now() > otpData.expiresAt) {
-      otpStore.delete(normalizedEmail);
-      return res.status(400).json({ message: 'OTP has expired', valid: false });
-    }
-
-    if (otpData.otp !== otp) {
-      return res.status(400).json({ message: 'Invalid OTP', valid: false });
-    }
+    const failure = checkOtp(otpData, normalizedEmail, otp);
+    if (failure) return res.status(failure.status).json(failure.body);
 
     res.status(200).json({ message: 'OTP verified successfully', valid: true });
   } catch (error) {

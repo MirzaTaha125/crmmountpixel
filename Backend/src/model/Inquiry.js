@@ -1,9 +1,13 @@
 import mongoose from 'mongoose';
 
+// Nothing here is mandatory. Leads are often taken down over the phone with
+// only half the details, and a half-filled lead is worth more than a lost one.
+// The entry points still refuse a row that is completely blank, and the public
+// website form does insist on name, email and phone of its own accord.
 const inquirySchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  email: { type: String, required: true },
-  phone: { type: String, required: true },
+  name: { type: String, trim: true, default: '' },
+  email: { type: String, trim: true, default: '' },
+  phone: { type: String, trim: true, default: '' },
   reason: { type: String },
   message: { type: String },
   source: { type: String, default: 'Website' },
@@ -42,14 +46,6 @@ const inquirySchema = new mongoose.Schema({
   }
 }, {
   timestamps: true
-});
-
-// Add validation to ensure at least reason or message is provided
-inquirySchema.pre('validate', function (next) {
-  if (!this.reason && !this.message) {
-    this.invalidate('reason', 'Either reason or message must be provided');
-  }
-  next();
 });
 
 const Inquiry = mongoose.model('Inquiry', inquirySchema);

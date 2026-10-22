@@ -6,6 +6,61 @@ import PaymentLink from '../model/PaymentLink.js';
 import PaymentHistory from '../model/PaymentHistory.js';
 import { generateClientId } from './ClientController.js';
 import { emitNewInquiry } from '../socket.js';
+import { normalizeSourceUrl } from '../utils/sourceUrl.js';
+import { logRecordChange } from '../services/activityLogService.js';
+
+// How many rows one bulk submission may carry. The grid in both frontends
+// enforces the same number, so the limit is never a surprise at submit time.
+export const MAX_BULK_INQUIRIES = 200;
+
+// How many inserts are in flight at once during a bulk submit. Sequential
+// would make 200 rows a long wait; unbounded would open 200 connections.
+const BULK_CONCURRENCY = 20;
+
+// Fields that make a row worth storing. No single one is mandatory — a lead
+// taken over the phone may be a name and a number and nothing else — but a row
+// with none of them is a blank the person did not mean to submit.
+const SUBSTANCE_FIELDS = ['name', 'email', 'phone', 'businessName', 'reason', 'message'];
+
+// Returns a human-readable problem, or null when the row is usable. Shared by
+// the single-inquiry form and the bulk grid so the two cannot drift on what
+// counts as a valid inquiry.
+const validateInquiryInput = (body = {}) => {
+  const text = (v) => String(v ?? '').trim();
+  if (!SUBSTANCE_FIELDS.some((k) => text(body[k]))) {
+    return 'An inquiry needs at least a name, phone, email, business or note';
+  }
+  return null;
+};
+
+// Builds the document from a request body. Assumes validateInquiryInput has
+// already passed.
+const buildInquiryData = (body, user) => {
+  const text = (v) => String(v ?? '').trim();
+  return {
+    name: text(body.name),
+    email: text(body.email),
+    phone: text(body.phone),
+    reason: text(body.reason) || text(body.message),
+    message: text(body.message) || text(body.reason),
+    source: body.source || 'Manual Entry',
+    brand: text(body.brand),
+    businessName: text(body.businessName),
+    serviceWebsite: !!body.serviceWebsite,
+    serviceLogo: !!body.serviceLogo,
+    serviceSmm: !!body.serviceSmm,
+    serviceOther: !!body.serviceOther,
+    finalQuotation: text(body.finalQuotation),
+    lastCalled: body.lastCalled || undefined,
+    sourceUrl: normalizeSourceUrl(body.sourceUrl),
+    createdBy: user._id,
+    createdByName: `${user.First_Name || ''} ${user.Last_Name || ''}`.trim() || 'Unknown User',
+    createdByRole: user.Role || 'Employee'
+  };
+};
+
+const logInquiry = (req, verb, doc, extra) =>
+  logRecordChange({ req, verb, entityType: 'Inquiry', module: 'Inquiries', doc, extra });
 
 export const createInquiry = async (req, res) => {
   try {
@@ -14,45 +69,13 @@ export const createInquiry = async (req, res) => {
       return res.status(401).json({ message: 'User not authenticated', error: 'Authentication required' });
     }
 
-    // Validate required fields
-    const { name, email, phone } = req.body;
-    if (!name || !email || !phone) {
-      return res.status(400).json({
-        message: 'Validation error',
-        error: 'Name, email, and phone are required fields'
-      });
+    const problem = validateInquiryInput(req.body);
+    if (problem) {
+      return res.status(400).json({ message: 'Validation error', error: problem });
     }
 
-    // Ensure at least reason or message is provided
-    if (!req.body.reason && !req.body.message) {
-      return res.status(400).json({
-        message: 'Validation error',
-        error: 'Either reason or message must be provided'
-      });
-    }
-
-    // Prepare inquiry data
-    const inquiryData = {
-      name: name.trim(),
-      email: email.trim(),
-      phone: phone.trim(),
-      reason: req.body.reason?.trim() || req.body.message?.trim() || '',
-      message: req.body.message?.trim() || req.body.reason?.trim() || '',
-      source: req.body.source || 'Manual Entry',
-      brand: req.body.brand?.trim() || '',
-      businessName: req.body.businessName?.trim() || '',
-      serviceWebsite: !!req.body.serviceWebsite,
-      serviceLogo: !!req.body.serviceLogo,
-      serviceSmm: !!req.body.serviceSmm,
-      serviceOther: !!req.body.serviceOther,
-      finalQuotation: req.body.finalQuotation?.trim() || '',
-      lastCalled: req.body.lastCalled || undefined,
-      createdBy: req.user._id,
-      createdByName: `${req.user.First_Name || ''} ${req.user.Last_Name || ''}`.trim() || 'Unknown User',
-      createdByRole: req.user.Role || 'Employee'
-    };
-
-    const inquiry = await Inquiry.create(inquiryData);
+    const inquiry = await Inquiry.create(buildInquiryData(req.body, req.user));
+    await logInquiry(req, 'created', inquiry);
 
     // Notify all connected staff in real time (sound + toast on the admin panel).
     emitNewInquiry(inquiry);
@@ -72,6 +95,98 @@ export const createInquiry = async (req, res) => {
 
     res.status(500).json({
       message: 'Error creating inquiry',
+      error: err.message || 'An unexpected error occurred'
+    });
+  }
+};
+
+// Bulk entry from the spreadsheet grid. Deliberately partial-success: someone
+// who typed forty rows should not lose thirty-eight of them because two had a
+// missing phone number. The response says exactly which rows did not go in, by
+// their index in the submitted array, so the grid can keep just those.
+export const createInquiriesBulk = async (req, res) => {
+  try {
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({ message: 'User not authenticated', error: 'Authentication required' });
+    }
+
+    const rows = Array.isArray(req.body?.inquiries) ? req.body.inquiries : null;
+    if (!rows || rows.length === 0) {
+      return res.status(400).json({ message: 'Validation error', error: 'No inquiries were submitted' });
+    }
+    if (rows.length > MAX_BULK_INQUIRIES) {
+      return res.status(400).json({
+        message: 'Validation error',
+        error: `At most ${MAX_BULK_INQUIRIES} inquiries can be added at once`
+      });
+    }
+
+    const failed = [];
+    const pending = [];
+    rows.forEach((row, index) => {
+      const problem = validateInquiryInput(row);
+      if (problem) failed.push({ row: index, error: problem });
+      else pending.push({ row: index, data: buildInquiryData(row, req.user) });
+    });
+
+    const created = [];
+    for (let i = 0; i < pending.length; i += BULK_CONCURRENCY) {
+      const batch = pending.slice(i, i + BULK_CONCURRENCY);
+      const results = await Promise.all(batch.map(async ({ row, data }) => {
+        try {
+          return { row, inquiry: await Inquiry.create(data) };
+        } catch (err) {
+          const detail = err.name === 'ValidationError'
+            ? Object.values(err.errors).map((e) => e.message).join(', ')
+            : err.message || 'Could not be saved';
+          return { row, error: detail };
+        }
+      }));
+      results.forEach((r) => (r.inquiry ? created.push(r) : failed.push(r)));
+    }
+
+    // No per-row socket emit. `new_inquiry` plays a sound and raises a toast on
+    // every staff panel, which is right for a lead arriving from a website and
+    // wrong for forty rows typed in by hand. The submitting panel reloads its
+    // own list.
+    failed.sort((a, b) => a.row - b.row);
+
+    if (created.length) {
+      await logRecordChange({
+        req,
+        verb: 'created',
+        entityType: 'Inquiry',
+        module: 'Inquiries',
+        doc: created[0].inquiry,
+        extra: {
+          bulk: true,
+          count: created.length,
+          // The names go in the log too, so a bulk entry can be checked later
+          // without hunting through the inquiry list for what arrived when.
+          names: created.map((c) => c.inquiry.name || c.inquiry.email).slice(0, 50),
+        },
+      });
+    }
+
+    if (created.length === 0) {
+      return res.status(400).json({
+        message: 'No inquiries were added',
+        error: failed[0]?.error || 'Every row was rejected',
+        created: 0,
+        failed
+      });
+    }
+
+    res.status(201).json({
+      message: `${created.length} ${created.length === 1 ? 'inquiry' : 'inquiries'} added`,
+      created: created.length,
+      inquiries: created.map((c) => c.inquiry),
+      failed
+    });
+  } catch (err) {
+    console.error('Error creating inquiries in bulk:', err);
+    res.status(500).json({
+      message: 'Error creating inquiries',
       error: err.message || 'An unexpected error occurred'
     });
   }
@@ -149,6 +264,7 @@ export const updateInquiry = async (req, res) => {
     if (req.body.finalQuotation !== undefined) updateData.finalQuotation = req.body.finalQuotation?.trim() || '';
     if (req.body.lastCalled !== undefined) updateData.lastCalled = req.body.lastCalled || null;
     if (req.body.source !== undefined) updateData.source = req.body.source;
+    if (req.body.sourceUrl !== undefined) updateData.sourceUrl = normalizeSourceUrl(req.body.sourceUrl);
     // Mark-only converted flag from the edit form's dropdown. This intentionally does
     // NOT create a client — only the explicit convert-to-client action does that.
     if (req.body.isConverted !== undefined) updateData.isConverted = !!req.body.isConverted;
@@ -157,6 +273,8 @@ export const updateInquiry = async (req, res) => {
     if (!inquiry) {
       return res.status(404).json({ message: 'Inquiry not found', error: 'Not found' });
     }
+
+    await logInquiry(req, 'updated', inquiry, { changed: Object.keys(updateData) });
 
     res.status(200).json({ message: 'Inquiry updated successfully', inquiry });
   } catch (err) {
@@ -181,6 +299,9 @@ export const deleteInquiry = async (req, res) => {
   try {
     const inquiry = await Inquiry.findByIdAndDelete(req.params.id);
     if (!inquiry) return res.status(404).json({ error: 'Not found' });
+    // Logged with the record attached — once it is gone, the log is the only
+    // place left that knows who this was.
+    await logInquiry(req, 'deleted', inquiry);
     res.json({ message: 'Deleted' });
   } catch (err) {
     res.status(500).json({ error: err.message });

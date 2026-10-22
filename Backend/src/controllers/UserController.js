@@ -7,7 +7,7 @@ import { logUserAction, logActivity } from "../services/activityLogService.js";
 
 export async function getUsers(req, res) {
   try {
-    const users = await User.find().select('-Password -Confirm_Password').sort({ createdAt: -1 });
+    const users = await User.find().select('-Password -Confirm_Password -twoFactorBackupCodes').sort({ createdAt: -1 });
     res.status(200).json(users);
   } catch (error) {
     console.error('Error fetching users:', error);

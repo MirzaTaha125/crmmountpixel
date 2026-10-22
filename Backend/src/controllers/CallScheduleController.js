@@ -1,6 +1,7 @@
 import CallSchedule from '../model/CallSchedule.js';
 import Client from '../model/Client.js';
 import Assignment from '../model/Assignment.js';
+import { logRecordChange } from '../services/activityLogService.js';
 
 // Create a new call schedule
 export const createCallSchedule = async (req, res) => {
@@ -70,6 +71,7 @@ export const createCallSchedule = async (req, res) => {
       .populate('clientId', 'name email phone')
       .populate('userId', 'First_Name Last_Name Role');
 
+    await logRecordChange({ req, verb: 'created', entityType: 'CallSchedule', module: 'Schedule', doc: populatedSchedule });
     res.status(201).json(populatedSchedule);
   } catch (error) {
     console.error('Error creating call schedule:', error);
@@ -205,6 +207,7 @@ export const updateCallSchedule = async (req, res) => {
       .populate('clientId', 'name email phone')
       .populate('userId', 'First_Name Last_Name Role');
 
+    await logRecordChange({ req, verb: 'updated', entityType: 'CallSchedule', module: 'Schedule', doc: updatedSchedule });
     res.json(updatedSchedule);
   } catch (error) {
     console.error('Error updating call schedule:', error);
@@ -229,6 +232,7 @@ export const deleteCallSchedule = async (req, res) => {
     }
 
     await CallSchedule.findByIdAndDelete(id);
+    await logRecordChange({ req, verb: 'deleted', entityType: 'CallSchedule', module: 'Schedule', doc: schedule });
     res.json({ message: 'Call schedule deleted successfully' });
   } catch (error) {
     console.error('Error deleting call schedule:', error);

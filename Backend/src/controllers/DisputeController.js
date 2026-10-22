@@ -1,4 +1,5 @@
 import Dispute from '../model/Dispute.js';
+import { logRecordChange } from '../services/activityLogService.js';
 
 // Create a new dispute
 export const createDispute = async (req, res) => {
@@ -31,6 +32,7 @@ export const createDispute = async (req, res) => {
       createdBy: req.user._id
     });
 
+    await logRecordChange({ req, verb: 'created', entityType: 'Dispute', module: 'Disputes', doc: dispute });
     res.status(201).json({ 
       message: 'Dispute created successfully', 
       dispute
@@ -133,6 +135,7 @@ export const updateDispute = async (req, res) => {
       .populate('clientId', 'name email')
       .populate('createdBy', 'name email');
     
+    await logRecordChange({ req, verb: 'updated', entityType: 'Dispute', module: 'Disputes', doc: updatedDispute });
     res.json({ 
       message: 'Dispute updated successfully', 
       dispute: updatedDispute
@@ -151,7 +154,8 @@ export const deleteDispute = async (req, res) => {
     if (!dispute) {
       return res.status(404).json({ message: 'Dispute not found' });
     }
-    
+
+    await logRecordChange({ req, verb: 'deleted', entityType: 'Dispute', module: 'Disputes', doc: dispute });
     res.json({ message: 'Dispute deleted successfully' });
   } catch (error) {
     console.error('Error deleting dispute:', error);
